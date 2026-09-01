@@ -32,10 +32,10 @@ instructor will follow it literally on conference days.]
 
 | Tier | Responsibilities in THIS system |
 |------|--------------------------------|
-| Presentation | Authentication | UserDashboard** | ToolManagement | ToolCatalog | ToolRequest | ToolReturn | UserProfile** | UserReview** |
-| Service | ToolService | UserService | AuthService | ReservationService | ReviewService |
-| Domain | Tool | User | Reservation | Review |
-| Data | ToolStore | UserStore | ReservationStore | ReviewStore |
+| Presentation | Authentication; UserDashboard**; ToolManagement; ToolCatalog; ToolRequest; ToolReturn; UserProfile**; UserReview**; |
+| Service | ToolService; UserService; AuthService; ReservationService; ReviewService |
+| Domain | Tool; User; Reservation; Review |
+| Data | ToolStore; UserStore; ReservationStore; ReviewStore |
 
  **(Lender && Borrower)
 
