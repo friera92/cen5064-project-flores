@@ -30,12 +30,12 @@ instructor will follow it literally on conference days.]
 
 ### Tier breakdown (Session 2 studio)
 
-| Tier | Responsibilities in THIS system |
-|------|--------------------------------|
-| Presentation | Authentication; UserDashboard**; ToolManagement; ToolCatalog; ToolRequest; ToolReturn; UserProfile**; UserReview**; |
-| Service | ToolService; UserService; AuthService; ReservationService; ReviewService |
-| Domain | Tool; User; Reservation; Review |
-| Data | ToolStore; UserStore; ReservationStore; ReviewStore |
+| Tier | Responsibilities in THIS system | Example Classes/Modules |
+|------|--------------------------------|--------------------------|
+| Presentation | Captures user input, handles session state, triggers form validation, and renders views or serializes JSON. | Authentication; UserDashboard**; ToolManagement; ToolCatalog; ToolRequest; ToolReturn; UserProfile**; UserReview**; |
+| Service | Coordinates application workflows, authorization checks, and transaction boundaries. | ToolService; UserService; AuthService; ReservationService; ReviewService |
+| Domain | Contains core business logic, invariant enforcement, and state transitions independent of the database or UI. | Tool; User; Reservation; Review |
+| Data | Manages all direct queries, database migrations, model relationships, and transactional queries. | ToolStore; UserStore; ReservationStore; ReviewStore |
 
  **(Lender && Borrower)
 
