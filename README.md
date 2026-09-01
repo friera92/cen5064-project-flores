@@ -32,10 +32,12 @@ instructor will follow it literally on conference days.]
 
 | Tier | Responsibilities in THIS system |
 |------|--------------------------------|
-| Presentation | [what your UI layer does] |
-| Service | [what your use-case/orchestration layer does] |
-| Domain | [your entities and business rules] |
-| Data | [how and where data is stored] |
+| Presentation | Authentication | UserDashboard** | ToolManagement | ToolCatalog | ToolRequest | ToolReturn | UserProfile** | UserReview** |
+| Service | ToolService | UserService | AuthService | ReservationService | ReviewService |
+| Domain | Tool | User | Reservation | Review |
+| Data | ToolStore | UserStore | ReservationStore | ReviewStore |
+
+ **(Lender && Borrower)
 
 ### C4 — Context & Container (Session 3 studio)
 
