@@ -39,6 +39,11 @@ instructor will follow it literally on conference days.]
 
  **(Lender && Borrower)
 
+### Tech Stack
+- Frontend: Vue.js 3 (Composition API) for a lightweight, responsive, and component-driven user interface.
+- Backend: PHP (Laravel) structured around a strict N-tier architecture (Presentation, Service, Domain, Data) to isolate business logic and routing.
+- Database & ORM: A single relational database (MySQL/PostgreSQL) managed via Eloquent ORM to handle transactional safety, data constraints, and optimistic/pessimistic locking.
+
 ### C4 — Context & Container (Session 3 studio)
 
 ```mermaid
