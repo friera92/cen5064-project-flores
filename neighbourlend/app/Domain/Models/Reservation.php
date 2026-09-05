@@ -2,6 +2,7 @@
 
 namespace App\Domain\Models;
 
+use App\Domain\States\ReservationSate;
 use Illuminate\Database\Eloquent\Model;
 
 class Reservation extends Model
@@ -14,6 +15,15 @@ class Reservation extends Model
         'end_date',
         'status'
     ];
+
+    public function casts(): array
+    {
+        return [
+            'start_date' => 'datetime',
+            'end_date' => 'datetime',
+            'status' => ReservationSate::class
+        ];
+    }
 
     public function borrower()
     {

@@ -2,10 +2,15 @@
 
 namespace App\Domain\Models;
 
+use App\Domain\States\ToolStatus;
+use App\Domain\States\ToolCondition;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Tool extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'title',
         'description',
@@ -15,6 +20,14 @@ class Tool extends Model
         'condition',
         'picture'
     ];
+
+    public function casts(): array
+    {
+        return [
+            'availability_status' => ToolStatus::class,
+            'condition' => ToolCondition::class
+        ];
+    }
 
     public function category()
     {
