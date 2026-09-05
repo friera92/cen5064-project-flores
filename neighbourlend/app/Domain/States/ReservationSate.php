@@ -2,9 +2,10 @@
 
 namespace App\Domain\States;
 
-enum ReservationSate: string
+enum ReservationState: string
 {
     case REQUESTED = 'REQUESTED';
+    case CANCELED = 'CANCELED';
     case APPROVED = 'APPROVED';
     case ACTIVE = 'ACTIVE';
     case RETURNED = 'RETURNED';

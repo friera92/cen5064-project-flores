@@ -2,7 +2,7 @@
 
 namespace App\Domain\Models;
 
-use App\Domain\States\ReservationSate;
+use App\Domain\States\ReservationState;
 use Illuminate\Database\Eloquent\Model;
 
 class Reservation extends Model
@@ -21,7 +21,7 @@ class Reservation extends Model
         return [
             'start_date' => 'datetime',
             'end_date' => 'datetime',
-            'status' => ReservationSate::class
+            'status' => ReservationState::class
         ];
     }
 
