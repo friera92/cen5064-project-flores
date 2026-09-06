@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description');
+            $table->decimal('daily_rate', 8, 2);
             $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
             $table->foreignId('owner_id')->constrained('users')->onDelete('cascade');
             $table->availability_status('availability_status')->default('AVAILABLE'); // Enum: AVAILABLE, IN_USE, MAINTENANCE, RETIRED

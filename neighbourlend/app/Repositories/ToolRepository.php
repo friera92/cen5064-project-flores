@@ -41,6 +41,11 @@ class ToolRepository implements ToolRepositoryInterface
         return Tool::find($id);
     }
 
+    public function findAll(): array
+    {
+        return Tool::all()->toArray();
+    }
+
     public function findByCategoryId(int $categoryId): array
     {
         return Tool::where('category_id', $categoryId)->get()->toArray();
@@ -64,5 +69,10 @@ class ToolRepository implements ToolRepositoryInterface
     public function findByAvailabilityStatus(string $availabilityStatus): array
     {
         return Tool::where('availability_status', $availabilityStatus)->get()->toArray();
+    }
+
+    public function findByIdWithLock(int $id): ?Tool
+    {
+        return Tool::where('id', $id)->lockForUpdate()->first();
     }
 }
