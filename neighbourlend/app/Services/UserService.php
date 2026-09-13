@@ -75,7 +75,7 @@ class UserService
             $user->tokens()->delete();
 
             // Persist the deletion
-            $deleted = $this->userRepository->delete($user);
+            $deleted = $this->userRepository->delete($user->id);
 
             if (!$deleted) {
                 throw new Exception('Failed to delete user account.');

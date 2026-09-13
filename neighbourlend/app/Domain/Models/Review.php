@@ -3,6 +3,7 @@
 namespace App\Domain\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class Review extends Model
 {
@@ -12,8 +13,19 @@ class Review extends Model
         'reviewee_id',
         'rating',
         'reservation_id',
-        'tool_id'
+        'tool_id',
+        'end_date',
+        'visible'
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'visible'  => 'boolean',
+            'end_date' => 'datetime',
+            'rating'   => 'integer',
+        ];
+    }
 
     public function reviewer()
     {
@@ -33,5 +45,32 @@ class Review extends Model
     public function tool()
     {
         return $this->belongsTo(Tool::class, 'tool_id');
+    }
+
+    /**
+     * Scope a query to only include actively visible reviews.
+     * Criteria:
+     * 1. 'visible' flag must be true.
+     * 2. 'end_date' must be either NULL (permanent) or in the future (> now).
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('visible', true)
+            ->where(function (Builder $q) {
+                $q->whereNull('end_date')
+                    ->orWhere('end_date', '>', now());
+            });
+    }
+
+    /**
+     * Helper method to check active state in memory.
+     */
+    public function isActive(): bool
+    {
+        if (!$this->visible) {
+            return false;
+        }
+
+        return is_null($this->end_date) || $this->end_date->isFuture();
     }
 }

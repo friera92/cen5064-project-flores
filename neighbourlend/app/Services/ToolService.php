@@ -30,9 +30,25 @@ class ToolService
 
     public function updateTool(Tool $tool, array $data): Tool
     {
-        $tool->fill($data);
-        $this->toolRepository->save($tool);
-        return $tool;
+        return DB::transaction(function () use ($tool, $data) {
+            // 1. Domain Guard: Prevent modifying tools currently with a borrower
+            if ($tool->availability_status === ToolStatus::IN_USE) {
+                throw new Exception('Cannot update a tool that is currently in use by a borrower.');
+            }
+
+            // 2. Prevent tampering with ownership
+            unset($data['owner_id'], $data['id']);
+
+            // 3. Update dirty attributes and persist
+            $tool->fill($data);
+
+            $saved = $this->toolRepository->save($tool);
+            if (!$saved) {
+                throw new Exception('Failed to save updated tool.');
+            }
+
+            return $tool;
+        });
     }
 
     public function deleteTool(Tool $tool): bool
@@ -64,7 +80,9 @@ class ToolService
 
     public function getToolById(int $id): ?Tool
     {
-        return $this->toolRepository->findById($id);
+        return DB::transaction(function () use ($id) {
+            return $this->toolRepository->findByIdWithLock($id);
+        });
     }
 
     public function getAllTools(): array

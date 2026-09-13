@@ -10,5 +10,5 @@ interface UserRepositoryInterface
     public function findByEmail(string $email): ?User;
     public function create(array $data): ?User;
     public function save(User $user): bool;
-    public function delete(User $user): bool;
+    public function delete(int $id): bool;
 }

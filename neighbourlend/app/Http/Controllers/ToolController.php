@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Services\ToolService;
 use App\Http\Requests\ToolRequest;
+use App\Domain\Models\Tool;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -33,10 +33,12 @@ class ToolController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function update(ToolRequest $request)
+    public function update(ToolRequest $request, Tool $tool)
     {
+        $this->authorize('update', $tool);
+
         $updatedTool = $this->toolService->updateTool(
-            $request->tool(),
+            $tool,
             $request->validated()
         );
         return response()->json([
@@ -45,8 +47,9 @@ class ToolController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function delete(ToolRequest $request)
+    public function delete(ToolRequest $request, Tool $tool)
     {
+        $this->authorize('update', $tool);
         $this->toolService->deleteTool($request->tool());
 
         return response()->json([

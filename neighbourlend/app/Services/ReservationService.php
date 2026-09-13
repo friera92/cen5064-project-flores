@@ -288,4 +288,14 @@ class ReservationService
             return $reservation;
         });
     }
+
+    public function getReservarionById(int $id)
+    {
+        $reservation = $this->reservationRepository->findById($id);
+        if (!$reservation) {
+            throw new Exception("Reservation not found");
+        }
+
+        $reservation;
+    }
 }

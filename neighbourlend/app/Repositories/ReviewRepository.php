@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Domain\Models\Review;
 use App\Repositories\Interfaces\ReviewRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
 
 class ReviewRepository implements ReviewRepositoryInterface
 {
@@ -40,5 +41,16 @@ class ReviewRepository implements ReviewRepositoryInterface
     public function findByReservationId(int $reservationId): array
     {
         return Review::where('reservation_id', $reservationId)->get()->toArray();
+    }
+
+    public function getReviewsForTool(int $toolId): Collection
+    {
+        return Review::query()
+            ->active() // Applies visible = true AND (end_date IS NULL OR end_date > NOW())
+            ->whereHas('reservation', function ($query) use ($toolId) {
+                $query->where('tool_id', $toolId);
+            })
+            ->latest()
+            ->get();
     }
 }

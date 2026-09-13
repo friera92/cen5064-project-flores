@@ -16,7 +16,7 @@ class AuthController extends Controller
         private AuthService $authService
     ) {}
 
-    public function register(RegisterRequest $request): JsonResponse
+    public function register(RegisterRequest $request)
     {
         $result = $this->authService->register($request->validated());
 

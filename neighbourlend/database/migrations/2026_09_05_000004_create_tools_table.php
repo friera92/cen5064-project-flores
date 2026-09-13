@@ -18,8 +18,8 @@ return new class extends Migration
             $table->decimal('daily_rate', 8, 2);
             $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
             $table->foreignId('owner_id')->constrained('users')->onDelete('cascade');
-            $table->availability_status('availability_status')->default('AVAILABLE'); // Enum: AVAILABLE, IN_USE, MAINTENANCE, RETIRED
-            $table->condition('condition')->default('CREATED'); // Enum: CREATED, NEW, GOOD, FAIR, POOR
+            $table->string('availability_status')->default('AVAILABLE'); // Enum: AVAILABLE, IN_USE, MAINTENANCE, RETIRED
+            $table->string('condition')->default('CREATED'); // Enum: CREATED, NEW, GOOD, FAIR, POOR
             $table->string('picture')->nullable();
             $table->timestamps();
         });

@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('reviews', function (Blueprint $table) {
+        Schema::create('reservations', function (Blueprint $table) {
             $table->id();
-            $table->text('comment');
-            $table->foreignId('reviewer_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('reviewee_id')->constrained('users')->onDelete('cascade');
-            $table->integer('rating');
-            $table->foreignId('reservation_id')->constrained('reservations')->onDelete('cascade');
+
             $table->foreignId('tool_id')->constrained('tools')->onDelete('cascade');
+            $table->foreignId('borrower_id')->constrained('users')->onDelete('cascade');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->string('status')->default('REQUESTED'); // Enum: REQUESTED, APPROVED, ACTIVE, RETURNED, CLOSED, DISPUTED, CANCELED
             $table->timestamps();
         });
     }
@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('reviews');
+        Schema::dropIfExists('reservations');
     }
 };
