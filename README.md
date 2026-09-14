@@ -49,7 +49,7 @@ instructor will follow it literally on conference days.]
 ```mermaid
 %% Replace this placeholder with YOUR system's context diagram.
 flowchart TB
-    user([User]) -->|uses| system[Tool Rental System]
+    user([Lender and/or Borrower User]) -->|uses| system[Tool Rental System]
     system -->|stores data in| db[(Database)]
 ```
 
