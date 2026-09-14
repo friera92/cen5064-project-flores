@@ -49,28 +49,41 @@ instructor will follow it literally on conference days.]
 ```mermaid
 %% Replace this placeholder with YOUR system's context diagram.
 flowchart TB
-    user([Lender and/or Borrower User]) -->|uses| system[Tool Rental System]
-    system -->|stores data in| db[(Database)]
+    %% Styling conforming to C4 Context standards
+    classDef person fill:#08427B,stroke:#073B6F,color:#ffffff;
+    classDef system fill:#1168BD,stroke:#0B4884,color:#ffffff;
+
+    subgraph Users ["People (Actors)"]
+        borrower["👤 Borrower<br/>[Person]<br/><br/>Rents tools and submits equipment reviews"]:::person
+        lender["👤 Lender<br/>[Person]<br/><br/>Lists owned tools and approves rentals"]:::person
+        admin["👤 Platform Admin<br/>[Person]<br/><br/>Manages categories, disputes, and user status"]:::person
+    end
+
+    neighbourlend["📦 NeighbourLend Platform<br/>[Software System]<br/><br/>Provides peer-to-peer equipment sharing, lifecycle reservation tracking, and trust management"]:::system
+
+    borrower -->|"Searches equipment & reserves tools<br/>[HTTPS/JSON]"| neighbourlend
+    lender -->|"Publishes tools & manages handoffs<br/>[HTTPS/JSON]"| neighbourlend
+    admin -->|"Moderates accounts & arbitrates disputes<br/>[HTTPS/JSON]"| neighbourlend
 ```
 
 ```mermaid
 %% Container view: your containers should match the tier table above.
-flowchart TB
-    subgraph YourSystem [Your System]
-        ui[Web UI / CLI<br/>Presentation] --> api[Application / Service]
-        api --> domain[Domain Model]
-        domain --> db[(Database<br/>Data tier)]
-    end
-```
-
 ### UML — Class & Sequence (Session 3 studio)
 
 ```mermaid
 %% Class diagram: your 3–4 core domain classes.
 classDiagram
-    class ExampleEntity {
+    class Tool {
         -id: Long
-        -name: String
+        -title: String
+        -description: String
+        -category_id: Long
+        -owner_id: Long
+        -availability_status: String
+        -condition: String
+        -returned_condition: String
+        -picture: String
+        -daily_rate: Float 
         +doSomething()
     }
 ```
