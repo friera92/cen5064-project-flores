@@ -49,17 +49,13 @@ instructor will follow it literally on conference days.]
 ```mermaid
 %% Replace this placeholder with YOUR system's context diagram.
 flowchart TB
-    %% Styling conforming to C4 Context standards
-    classDef person fill:#08427B,stroke:#073B6F,color:#ffffff;
-    classDef system fill:#1168BD,stroke:#0B4884,color:#ffffff;
-
-    subgraph Users ["People (Actors)"]
-        borrower["👤 Borrower<br/>[Person]<br/><br/>Rents tools and submits equipment reviews"]:::person
-        lender["👤 Lender<br/>[Person]<br/><br/>Lists owned tools and approves rentals"]:::person
-        admin["👤 Platform Admin<br/>[Person]<br/><br/>Manages categories, disputes, and user status"]:::person
+    subgraph Users ["Users"]
+        borrower["Borrower<br/>[Person]<br/><br/>Rents tools and submits equipment reviews"]:::person
+        lender["Lender<br/>[Person]<br/><br/>Lists owned tools and approves rentals"]:::person
+        admin["Platform Admin<br/>[Person]<br/><br/>Manages categories, disputes, and user status"]:::person
     end
 
-    neighbourlend["📦 NeighbourLend Platform<br/>[Software System]<br/><br/>Provides peer-to-peer equipment sharing, lifecycle reservation tracking, and trust management"]:::system
+    neighbourlend[" NeighbourLend Platform<br/>[Software System]<br/><br/>Provides peer-to-peer equipment sharing, lifecycle reservation tracking, and trust management"]:::system
 
     borrower -->|"Searches equipment & reserves tools<br/>[HTTPS/JSON]"| neighbourlend
     lender -->|"Publishes tools & manages handoffs<br/>[HTTPS/JSON]"| neighbourlend
@@ -67,25 +63,87 @@ flowchart TB
 ```
 
 ```mermaid
-%% Container view: your containers should match the tier table above.
-### UML — Class & Sequence (Session 3 studio)
+flowchart TB
+    subgraph Users
+        U1["Lender"]
+        U2["Borrower"]
+        U3["Admin"]
+    end
+
+    subgraph Frontend ["Client Tier"]
+        UI["Neighbour Lend Web UI\n(SPA / Web Application)"]
+    end
+
+    subgraph Backend ["Backend Tier (Server-Side)"]
+        API["Laravel REST API\n(Controllers, Services, Policies)"]
+    end
+
+    subgraph Storage ["Persistence Tier"]
+        DB[("PostgreSQL Database\n(Users, Tools, Reservations, Reviews)")]
+    end
+
+    U1 -->|"Manages tools, approves handoff"| UI
+    U2 -->|"Browses items, books reservations"| UI
+    U3 -->|"Moderates disputes, manages categories"| UI
+
+    UI -->|"JSON / HTTPS\n(Sanctum Bearer Token)"| API
+    API -->|"SQL / PDO\n(Transactions & Row Locks)"| DB
+```
 
 ```mermaid
-%% Class diagram: your 3–4 core domain classes.
 classDiagram
+    class User {
+        -id: Long
+        -name: String
+        -email: String
+        -password: String
+        -phone: String
+        -address: String
+        -picture: String
+        -is_admin: Boolean       
+    }
+
+    class Category {
+        -id: Long
+        -name: String
+        -description: String
+    }
+
     class Tool {
         -id: Long
         -title: String
         -description: String
-        -category_id: Long
-        -owner_id: Long
+        -daily_rate: BigDecimal
         -availability_status: String
         -condition: String
-        -returned_condition: String
         -picture: String
-        -daily_rate: Float 
-        +doSomething()
     }
+
+    class Reservation {
+        -id: Long
+        -start_date: Date
+        -end_date: Date
+        -total_cost: BigDecimal
+        -status: String
+        -returned_condition: String
+    }
+
+    class Review {
+        -id: Long
+        -rating: Integer
+        -comment: String
+        -visible: Boolean
+        -end_date: Date
+    }
+
+    User "1" --> "0..*" Tool : owns
+    User "1" --> "0..*" Reservation : borrows
+    User "1" --> "0..*" Review : writes
+
+    Category "1" <-- "0..*" Tool : categorized under
+
+    Tool "1" --> "0..*" Reservation : booked in
+    Reservation "1" --> "0..2" Review : produces
 ```
 
 ```mermaid
