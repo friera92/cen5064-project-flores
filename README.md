@@ -55,7 +55,7 @@ flowchart TB
         admin["Platform Admin<br/>[Person]<br/><br/>Manages categories, disputes, and user status"]:::person
     end
 
-    neighbourlend[" NeighbourLend Platform<br/>[Software System]<br/><br/>Provides peer-to-peer equipment sharing, lifecycle reservation tracking, and trust management"]:::system
+    neighbourlend["NeighbourLend Platform<br/>[Software System]<br/><br/>Provides peer-to-peer equipment sharing, lifecycle reservation tracking, and trust management"]:::system
 
     borrower -->|"Searches equipment & reserves tools<br/>[HTTPS/JSON]"| neighbourlend
     lender -->|"Publishes tools & manages handoffs<br/>[HTTPS/JSON]"| neighbourlend
@@ -147,18 +147,25 @@ classDiagram
 ```
 
 ```mermaid
-%% Sequence diagram: ONE core use case, end to end.
 sequenceDiagram
-    actor U as User
-    participant UI
-    participant S as Service
-    participant D as Data
-    U->>UI: action
-    UI->>S: request
-    S->>D: save/load
-    D-->>S: result
-    S-->>UI: response
-    UI-->>U: confirmation
+    actor U as User (Borrower)
+    participant UI as Web UI
+    participant S as ReservationService
+    participant D as Database
+
+    U->>UI: Request tool booking (dates)
+    UI->>S: POST /api/reservations
+
+    Note over S: Check Authorization Policy<br/>(User is not tool owner)
+
+    S->>D: Check availability (lockForUpdate)
+    D-->>S: Tool available
+
+    S->>D: Save reservation (Status: PENDING)
+    D-->>S: Reservation confirmed
+
+    S-->>UI: 201 Created (Reservation details)
+    UI-->>U: Display booking confirmation
 ```
 
 ## Architecture Decision Records
