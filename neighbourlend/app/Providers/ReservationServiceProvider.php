@@ -6,7 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use App\Repositories\ReservationRepository;
 use App\Repositories\Interfaces\ReservationRepositoryInterface;
 
-class RepositoryServiceProvider extends ServiceProvider
+class ReservationServiceProvider extends ServiceProvider
 {
     /**
      * Register services.

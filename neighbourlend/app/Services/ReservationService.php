@@ -9,6 +9,8 @@ use App\Repositories\Interfaces\ToolRepositoryInterface;
 use App\Repositories\Interfaces\ReservationRepositoryInterface;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Carbon\CarbonImmutable;
+use InvalidArgumentException;
 
 class ReservationService
 {
@@ -35,8 +37,8 @@ class ReservationService
             }
 
             // 3. Chronological Sanity Check
-            if ($data['start_date'] >= $data['end_date']) {
-                throw new Exception('End date must be after the start date.');
+            if ($data['start_date'] > $data['end_date']) {
+                throw new Exception('End date must be on or after the start date');
             }
 
             // 4. Overlap Conflict Resolution (Anti-Double Booking)
@@ -49,6 +51,14 @@ class ReservationService
             if ($hasConflict) {
                 throw new Exception('The tool is already booked or requested for the selected dates.');
             }
+
+            $cost = $this->calculateCost(
+                (float) $tool->daily_rate,
+                $data['start_date'],
+                $data['end_date']
+            );
+
+            $data['total_cost'] = $cost['total_cost'];
 
             return $this->reservationRepository->create($data);
         });
@@ -218,7 +228,7 @@ class ReservationService
                 throw new Exception('Only the tool owner can inspect the tool.');
             }
 
-            $tool->returned_condition = $returnedCondition;
+            $reservation->returned_condition = $returnedCondition;
 
             switch ($returnedCondition) {
                 case 'DAMAGED':
@@ -265,11 +275,11 @@ class ReservationService
                 throw new Exception('Only the tool owner can close the reservation.');
             }
 
-            if ($tool->availability_status === ToolStatus::INSPECTION && $tool->returned_condition !== ToolReturnedCondition::GOOD) {
+            if ($tool->availability_status === ToolStatus::INSPECTION && $reservation->returned_condition !== ToolReturnedCondition::GOOD) {
                 throw new Exception('Tool is still under inspection or has pending issues.');
             }
 
-            if ($tool->returned_condition == ToolReturnedCondition::GOOD) {
+            if ($reservation->returned_condition == ToolReturnedCondition::GOOD) {
                 $tool->availability_status = ToolStatus::AVAILABLE;
             } else {
                 throw new Exception('The tool condition is not valid for closing the reservation and might be on dispute.');
@@ -296,6 +306,38 @@ class ReservationService
             throw new Exception("Reservation not found");
         }
 
-        $reservation;
+        return $reservation;
+    }
+
+    public function calculateCost(
+        float $dailyRate,
+        string $startDate,
+        string $endDate
+    ): array {
+        $start = CarbonImmutable::createFromFormat('!Y-m-d', $startDate);
+        $end = CarbonImmutable::createFromFormat('!Y-m-d', $endDate);
+
+        if (!$start || !$end || $start->gt($end)) {
+            throw new InvalidArgumentException(
+                'End date must be on or after the start date.'
+            );
+        }
+
+        // Both the start and end dates count as rental days.
+        $days = (int) $start->diffInDays($end) + 1;
+
+        $subtotal = round($dailyRate * $days, 2);
+
+        $feeRate = (float) config('reservations.fee_rate', 0);
+        $fee = round($subtotal * $feeRate, 2);
+
+        return [
+            'days' => $days,
+            'daily_rate' => round($dailyRate, 2),
+            'subtotal' => $subtotal,
+            'tax_rate' => $feeRate,
+            'tax' => $fee,
+            'total_cost' => round($subtotal + $fee, 2),
+        ];
     }
 }

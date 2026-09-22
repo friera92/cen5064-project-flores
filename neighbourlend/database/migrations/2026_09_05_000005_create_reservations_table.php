@@ -18,6 +18,8 @@ return new class extends Migration
             $table->foreignId('borrower_id')->constrained('users')->onDelete('cascade');
             $table->date('start_date');
             $table->date('end_date');
+            $table->decimal('total_cost', 8, 2)->default(0);
+            $table->string('returned_condition')->nullable();
             $table->string('status')->default('REQUESTED'); // Enum: REQUESTED, APPROVED, ACTIVE, RETURNED, CLOSED, DISPUTED, CANCELED
             $table->timestamps();
         });

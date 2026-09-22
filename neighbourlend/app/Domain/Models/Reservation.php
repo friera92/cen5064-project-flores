@@ -4,6 +4,7 @@ namespace App\Domain\Models;
 
 use App\Domain\States\ReservationState;
 use Illuminate\Database\Eloquent\Model;
+use App\Domain\States\ToolReturnedCondition;
 
 class Reservation extends Model
 {
@@ -13,7 +14,9 @@ class Reservation extends Model
         'tool_id',
         'start_date',
         'end_date',
-        'status'
+        'status',
+        'total_cost',
+        'returned_condition'
     ];
 
     public function casts(): array
@@ -21,7 +24,9 @@ class Reservation extends Model
         return [
             'start_date' => 'datetime',
             'end_date' => 'datetime',
-            'status' => ReservationState::class
+            'status' => ReservationState::class,
+            'returned_condition' => ToolReturnedCondition::class,
+            'total_cost' => 'decimal:2',
         ];
     }
 

@@ -4,7 +4,6 @@ namespace App\Domain\Models;
 
 use App\Domain\States\ToolStatus;
 use App\Domain\States\ToolCondition;
-use App\Domain\States\ToolReturnedCondition;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -19,7 +18,6 @@ class Tool extends Model
         'owner_id',
         'availability_status',
         'condition',
-        'returned_condition',
         'picture',
         'daily_rate'
     ];
@@ -28,8 +26,7 @@ class Tool extends Model
     {
         return [
             'availability_status' => ToolStatus::class,
-            'condition' => ToolCondition::class,
-            'returned_condition' => ToolReturnedCondition::class,
+            'condition' => ToolCondition::class
         ];
     }
 

@@ -81,7 +81,11 @@ class ToolService
     public function getToolById(int $id): ?Tool
     {
         return DB::transaction(function () use ($id) {
-            return $this->toolRepository->findByIdWithLock($id);
+            $tool = $this->toolRepository->findByIdWithLock($id);
+            if (!$tool) {
+                throw new Exception("Tool not found");
+            }
+            return $tool;
         });
     }
 

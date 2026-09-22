@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme static {
+  --font-sans: 'Inter', sans-serif;
+}
+
+:root {
+  --nl-primary: #176B52;
+  --nl-primary-dark: #124D3D;
+  --nl-background: #FAF9F6;
+  --nl-surface: #FFFFFF;
+  --nl-text: #172B25;
+  --nl-muted: #66736D;
+  --nl-border: #E5E9E4;
+}
+
+body {
+  background-color: var(--nl-background);
+  color: var(--nl-text);
+  font-family: var(--font-sans);
+}

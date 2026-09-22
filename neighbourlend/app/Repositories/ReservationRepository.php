@@ -25,7 +25,10 @@ class ReservationRepository implements ReservationRepositoryInterface
 
     public function findByUserId(int $userId): array
     {
-        return Reservation::where('user_id', $userId)->get()->toArray();
+        return Reservation::with('tool')
+            ->where('borrower_id', $userId)
+            ->get()
+            ->toArray();
     }
 
     public function findByToolId(int $toolId): array
@@ -45,10 +48,10 @@ class ReservationRepository implements ReservationRepositoryInterface
     {
         return Reservation::where('tool_id', $toolId)
             // Only consider bookings that actively block the tool
-            ->whereIn('state', ['REQUESTED', 'APPROVED', 'ACTIVE'])
+            ->whereIn('status', ['REQUESTED', 'APPROVED', 'ACTIVE'])
             // The universal overlap condition:
-            ->where('start_date', '<', $endDate)
-            ->where('end_date', '>', $startDate)
+            ->where('start_date', '<=', $endDate)
+            ->where('end_date', '>=', $startDate)
             ->exists();
     }
 }

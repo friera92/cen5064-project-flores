@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\UserController;
 
 // Public routes
@@ -30,6 +31,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('/review')->group(function () {
         Route::post('/add', []);
         Route::get('/show', []);
+    });
+
+    Route::prefix('/reservation')->group(function () {
+        Route::post('/new', [ReservationController::class, 'store']);
+        Route::get('/all', [ReservationController::class, 'index']);
+        Route::get('/{reservation}', [ReservationController::class, 'show']);
+        Route::post('/quote', [ReservationController::class, 'quote']);
     });
 });
 

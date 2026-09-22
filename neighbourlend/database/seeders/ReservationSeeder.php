@@ -31,7 +31,7 @@ class ReservationSeeder extends Seeder
                 'end_date'           => now()->subDays(2)->toDateString(),
                 'status'             => ReservationState::CLOSED->value,
                 // 'total_cost'         => 45.00,
-                // 'returned_condition' => ToolReturnedCondition::GOOD->value,
+                'returned_condition' => ToolReturnedCondition::GOOD->value
             ]
         );
 
@@ -46,7 +46,7 @@ class ReservationSeeder extends Seeder
                 'end_date'           => now()->addDays(2)->toDateString(),
                 'status'             => ReservationState::ACTIVE->value,
                 // 'total_cost'         => 90.00,
-                // 'returned_condition' => null,
+                'returned_condition' => null
             ]
         );
     }
