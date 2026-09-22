@@ -49,45 +49,123 @@ instructor will follow it literally on conference days.]
 ```mermaid
 %% Replace this placeholder with YOUR system's context diagram.
 flowchart TB
-    user([User]) -->|uses| system[Your System]
-    system -->|stores data in| db[(Database)]
-```
-
-```mermaid
-%% Container view: your containers should match the tier table above.
-flowchart TB
-    subgraph YourSystem [Your System]
-        ui[Web UI / CLI<br/>Presentation] --> api[Application / Service]
-        api --> domain[Domain Model]
-        domain --> db[(Database<br/>Data tier)]
+    subgraph Users ["Users"]
+        borrower["Borrower<br/>[Person]<br/><br/>Rents tools and submits equipment reviews"]:::person
+        lender["Lender<br/>[Person]<br/><br/>Lists owned tools and approves rentals"]:::person
+        admin["Platform Admin<br/>[Person]<br/><br/>Manages categories, disputes, and user status"]:::person
     end
+
+    neighbourlend["NeighbourLend Platform<br/>[Software System]<br/><br/>Provides peer-to-peer equipment sharing, lifecycle reservation tracking, and trust management"]:::system
+
+    borrower -->|"Searches equipment & reserves tools<br/>[HTTPS/JSON]"| neighbourlend
+    lender -->|"Publishes tools & manages handoffs<br/>[HTTPS/JSON]"| neighbourlend
+    admin -->|"Moderates accounts & arbitrates disputes<br/>[HTTPS/JSON]"| neighbourlend
 ```
 
-### UML — Class & Sequence (Session 3 studio)
+```mermaid
+flowchart TB
+    subgraph Users
+        U1["Lender"]
+        U2["Borrower"]
+        U3["Admin"]
+    end
+
+    subgraph Frontend ["Client Tier"]
+        UI["Neighbour Lend Web UI\n(SPA / Web Application)"]
+    end
+
+    subgraph Backend ["Backend Tier (Server-Side)"]
+        API["Laravel REST API\n(Controllers, Services, Policies)"]
+    end
+
+    subgraph Storage ["Persistence Tier"]
+        DB[("PostgreSQL Database\n(Users, Tools, Reservations, Reviews)")]
+    end
+
+    U1 -->|"Manages tools, approves handoff"| UI
+    U2 -->|"Browses items, books reservations"| UI
+    U3 -->|"Moderates disputes, manages categories"| UI
+
+    UI -->|"JSON / HTTPS\n(Sanctum Bearer Token)"| API
+    API -->|"SQL / PDO\n(Transactions & Row Locks)"| DB
+```
 
 ```mermaid
-%% Class diagram: your 3–4 core domain classes.
 classDiagram
-    class ExampleEntity {
+    class User {
         -id: Long
         -name: String
-        +doSomething()
+        -email: String
+        -password: String
+        -phone: String
+        -address: String
+        -picture: String
+        -is_admin: Boolean       
     }
+
+    class Category {
+        -id: Long
+        -name: String
+        -description: String
+    }
+
+    class Tool {
+        -id: Long
+        -title: String
+        -description: String
+        -daily_rate: BigDecimal
+        -availability_status: String
+        -condition: String
+        -picture: String
+    }
+
+    class Reservation {
+        -id: Long
+        -start_date: Date
+        -end_date: Date
+        -total_cost: BigDecimal
+        -status: String
+        -returned_condition: String
+    }
+
+    class Review {
+        -id: Long
+        -rating: Integer
+        -comment: String
+        -visible: Boolean
+        -end_date: Date
+    }
+
+    User "1" --> "0..*" Tool : owns
+    User "1" --> "0..*" Reservation : borrows
+    User "1" --> "0..*" Review : writes
+
+    Category "1" <-- "0..*" Tool : categorized under
+
+    Tool "1" --> "0..*" Reservation : booked in
+    Reservation "1" --> "0..2" Review : produces
 ```
 
 ```mermaid
-%% Sequence diagram: ONE core use case, end to end.
 sequenceDiagram
-    actor U as User
-    participant UI
-    participant S as Service
-    participant D as Data
-    U->>UI: action
-    UI->>S: request
-    S->>D: save/load
-    D-->>S: result
-    S-->>UI: response
-    UI-->>U: confirmation
+    actor U as User (Borrower)
+    participant UI as Web UI
+    participant S as ReservationService
+    participant D as Database
+
+    U->>UI: Request tool booking (dates)
+    UI->>S: POST /api/reservations
+
+    Note over S: Check Authorization Policy<br/>(User is not tool owner)
+
+    S->>D: Check availability (lockForUpdate)
+    D-->>S: Tool available
+
+    S->>D: Save reservation (Status: PENDING)
+    D-->>S: Reservation confirmed
+
+    S-->>UI: 201 Created (Reservation details)
+    UI-->>U: Display booking confirmation
 ```
 
 ## Architecture Decision Records
@@ -102,5 +180,4 @@ Decisions live in [`docs/adr/`](docs/adr/). Start with ADR-001 in Session 4.
 
 A one-line note per week keeps your commit story readable:
 
-- Week 1 (Aug 24): repo created, three ideas drafted
-- Week 2 (Aug 31): ...
+- Week 3 (Sep 21): creating new issue, setting up a branch
