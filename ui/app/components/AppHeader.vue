@@ -56,7 +56,7 @@ const navigation = [
         />
 
         <UButton
-          to="/auth/login"
+          to="/login"
           icon="i-lucide-user-round"
           color="neutral"
           variant="ghost"

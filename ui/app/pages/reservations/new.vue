@@ -1,19 +1,34 @@
 
 <script setup lang="ts">
 import { equipment } from '~/data/equipment'
-import {
-  rentalDays,
-  estimatedRentalCost
-} from '~/utils/reservations'
+import type { ReservationQuote } from '~/composables/useReservations'
 
 const route = useRoute()
 
-function queryString(value: unknown): string {
-  return typeof value === 'string' ? value : ''
-}
+const { getQuote } = useReservations()
+
+const quote = ref<ReservationQuote | null>(null)
+const quoteLoading = ref(false)
+const quoteError = ref('')
 
 const toolId = Number(queryString(route.query.tool))
 const tool = equipment.find(item => item.id === toolId)
+
+const startDate = ref(queryString(route.query.start))
+const endDate = ref(queryString(route.query.end))
+
+const today = ref('')
+
+const validDates = computed(() =>
+  Boolean(
+    startDate.value
+    && endDate.value
+    && startDate.value >= today.value
+    && endDate.value >= startDate.value
+  )
+)
+
+const submitted = ref(false)
 
 if (!tool) {
   throw createError({
@@ -22,8 +37,62 @@ if (!tool) {
   })
 }
 
-const startDate = ref(queryString(route.query.start))
-const endDate = ref(queryString(route.query.end))
+onMounted(() => {
+  today.value = localToday()
+})
+
+watch(
+  [startDate, endDate],
+  async () => {
+    submitted.value = false
+    quote.value = null
+    quoteError.value = ''
+
+    if (
+      startDate.value
+      && endDate.value
+      && endDate.value < startDate.value
+    ) {
+      endDate.value = ''
+      return
+    }
+
+    if (!validDates.value) {
+      return
+    }
+
+    quoteLoading.value = true
+
+    try {
+      const response = await getQuote({
+        tool_id: tool.id,
+        start_date: startDate.value,
+        end_date: endDate.value
+      })
+
+      quote.value = response.data
+      console.log(quote.value)
+    } catch (error) {
+      console.error(error)
+
+      quoteError.value =
+        'Unable to calculate the estimated cost.'
+    } finally {
+      quoteLoading.value = false
+    }
+  }
+)
+
+function submitDemoRequest() {
+  if (!validDates.value) return
+
+  // Demo only: no API call and no persisted reservation.
+  submitted.value = true
+}
+
+function queryString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
 
 function localToday(): string {
   const date = new Date()
@@ -32,54 +101,6 @@ function localToday(): string {
   const day = String(date.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
-}
-
-const today = ref('')
-
-onMounted(() => {
-  today.value = localToday()
-})
-
-const days = computed(() =>
-  rentalDays(startDate.value, endDate.value)
-)
-
-const total = computed(() =>
-  estimatedRentalCost(
-    tool.daily_rate,
-    startDate.value,
-    endDate.value
-  )
-)
-
-const validDates = computed(() =>
-  Boolean(
-    startDate.value
-    && endDate.value
-    && startDate.value >= today.value
-    && days.value > 0
-  )
-)
-
-const submitted = ref(false)
-
-watch(startDate, (value) => {
-  if (value && endDate.value && endDate.value < value) {
-    endDate.value = ''
-  }
-
-  submitted.value = false
-})
-
-watch(endDate, () => {
-  submitted.value = false
-})
-
-function submitDemoRequest() {
-  if (!validDates.value) return
-
-  // Demo only: no API call and no persisted reservation.
-  submitted.value = true
 }
 </script>
 
@@ -167,7 +188,7 @@ function submitDemoRequest() {
           >
             <label class="block">
   <span class="mb-2 block text-sm font-medium text-[#172B25]">
-    Start date and time
+    Start date
   </span>
 
   <input
@@ -181,7 +202,7 @@ function submitDemoRequest() {
 
            <label class="block">
   <span class="mb-2 block text-sm font-medium text-[#172B25]">
-    End date and time
+    End date
   </span>
 
   <input
@@ -250,10 +271,8 @@ function submitDemoRequest() {
             </div>
           </div>
 
-          <div
-            class="mt-6 space-y-3 border-t border-[#E5E9E4]
-                   pt-5 text-sm"
-          >
+          <div class="mt-6 space-y-3 border-t border-[#E5E9E4]
+                  pt-5 text-sm">
             <div class="flex justify-between text-[#66736D]">
               <span>Daily rate</span>
               <span>${{ tool.daily_rate.toFixed(2) }}</span>
@@ -261,16 +280,51 @@ function submitDemoRequest() {
 
             <div class="flex justify-between text-[#66736D]">
               <span>Rental days</span>
-              <span>{{ days || '—' }}</span>
+              <span>{{ quote?.days ?? '—' }}</span>
             </div>
+
+            <div class="flex justify-between text-[#66736D]">
+              <span>Subtotal</span>
+              <span>
+                {{ quote ? `$${quote.subtotal.toFixed(2)}` : '—' }}
+              </span>
+            </div>
+
+            <div class="flex justify-between text-[#66736D]">
+              <span>Estimated fee</span>
+              <span>
+                {{ quote ? `$${quote.tax.toFixed(2)}` : '—' }}
+              </span>
+            </div>
+
+            <p
+              v-if="quoteLoading"
+              class="text-sm text-[#66736D]"
+            >
+              Calculating estimated cost...
+            </p>
+
+            <p
+              v-if="quoteError"
+              class="text-sm text-red-600"
+            >
+              {{ quoteError }}
+            </p>
 
             <div
               class="flex justify-between border-t
-                     border-[#E5E9E4] pt-4 text-base
-                     font-semibold text-[#172B25]"
+                    border-[#E5E9E4] pt-4 text-base
+                    font-semibold text-[#172B25]"
             >
               <span>Estimated total</span>
-              <span>${{ total.toFixed(2) }}</span>
+
+              <span>
+                {{
+                  quote
+                    ? `$${quote.total_cost.toFixed(2)}`
+                    : '—'
+                }}
+              </span>
             </div>
           </div>
         </aside>

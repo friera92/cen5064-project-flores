@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Domain\States\ToolStatus;
 use App\Domain\States\ToolReturnedCondition;
 use App\Domain\States\ReservationState;
-use App\Repositories\Interfaces\ToolRepositoryInterface;
-use App\Repositories\Interfaces\ReservationRepositoryInterface;
+use App\Repositories\ReservationRepository;
+use App\Repositories\ToolRepository;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\CarbonImmutable;
@@ -15,8 +15,8 @@ use InvalidArgumentException;
 class ReservationService
 {
     public function __construct(
-        private ReservationRepositoryInterface $reservationRepository,
-        private ToolRepositoryInterface $toolRepository
+        private ReservationRepository $reservationRepository,
+        private ToolRepository $toolRepository
     ) {}
 
     public function requestTool(array $data)
@@ -309,11 +309,8 @@ class ReservationService
         return $reservation;
     }
 
-    public function calculateCost(
-        float $dailyRate,
-        string $startDate,
-        string $endDate
-    ): array {
+    public function calculateCost(float $dailyRate, string $startDate, string $endDate): array
+    {
         $start = CarbonImmutable::createFromFormat('!Y-m-d', $startDate);
         $end = CarbonImmutable::createFromFormat('!Y-m-d', $endDate);
 
