@@ -176,6 +176,13 @@ Decisions live in [`docs/adr/`](docs/adr/). Start with ADR-001 in Session 4.
 |---|----------|--------|
 | [001](docs/adr/adr-001.md) | [What I am building and why] | [proposed] |
 
+### AI-Assisted Development
+
+AI-assisted code review was documented in
+[Connecting the UI with the laravel backend- #5](https://github.com/friera92/cen5064-project-flores/pull/5), including
+the issues identified, changes applied, and
+design decisions retained.
+
 ## Weekly log (optional but recommended)
 
 A one-line note per week keeps your commit story readable:
