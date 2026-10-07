@@ -1,6 +1,7 @@
-
 export function useApi() {
   const config = useRuntimeConfig()
+
+  const token = useCookie<string | null>('auth_token')
 
   function request<T>(
     path: string,
@@ -9,8 +10,16 @@ export function useApi() {
     return $fetch<T>(
       `${config.public.apiBase}${path}`,
       {
-        credentials: 'include',
-        ...options
+        ...options,
+
+        headers: {
+          ...options.headers,
+          ...(token.value
+            ? {
+                Authorization: `Bearer ${token.value}`
+              }
+            : {})
+        }
       }
     )
   }

@@ -20,26 +20,130 @@ Dual-Sided Trust & Return Review System: Post-loan condition confirmation, dispu
 
 ## How to run
 
+### Prerequisites
+
+Install the following tools before starting:
+
+- Git
+- PHP and Composer (use the PHP version required by `neighbourlend/composer.json`)
+- PostgreSQL and the PHP PostgreSQL extensions (`pdo_pgsql`, `pgsql`)
+- Node.js and npm (use the Node.js version supported by the Nuxt project)
+
+Verify the installed tools with `php -v`, `composer --version`, `php -m`, `node -v`, and `npm -v`.
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/friera92/cen5064-project-flores.git
+cd cen5064-project-flores
 ```
-[Exact commands to build and run your system from a clean clone.
-Update this every time the steps change — your partner and your
-instructor will follow it literally on conference days.]
+
+All paths below are relative to the repository root.
+
+### 2. Set up PostgreSQL
+
+Start PostgreSQL and create a local database named `neighbourlend`. Create or use a PostgreSQL account with permission to access that database. Keep database credentials in the backend `.env` file; do not commit them to Git.
+
+### 3. Configure and start the Laravel API
+
+Open a terminal in the repository root:
+
+```bash
+cd neighbourlend
+composer install
 ```
+
+Copy the environment template:
+
+```powershell
+# PowerShell (Windows)
+Copy-Item .env.example .env
+```
+
+On macOS/Linux, use `cp .env.example .env` instead. Edit `neighbourlend/.env` to match your local PostgreSQL setup and the frontend URL:
+
+```dotenv
+APP_URL=http://localhost:8000
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=neighbourlend
+DB_USERNAME=your_postgres_user
+DB_PASSWORD=your_postgres_password
+SANCTUM_STATEFUL_DOMAINS=localhost:3000
+```
+
+If the project uses `config/cors.php`, allow the Nuxt origin `http://localhost:3000` in `allowed_origins`, include `api/*` in `paths`, and allow the required request methods and headers. For the current Bearer-token authentication flow, browser cookies are not required. If `config/cors.php` is absent, it can be published with `php artisan config:publish cors`.
+
+Initialize the Laravel application and database:
+
+```bash
+php artisan key:generate
+php artisan migrate
+php artisan config:clear
+```
+
+If the repository provides seeders and demo data is needed, run `php artisan db:seed` (check available seeders first).
+
+Start the backend:
+
+```bash
+php artisan serve --host=localhost --port=8000
+```
+
+The API will be available at `http://localhost:8000`. Keep this terminal running.
+
+### 4. Configure and start the Nuxt frontend
+
+Open a **second terminal** at the repository root:
+
+```bash
+cd ui
+npm install
+```
+
+Create `ui/.env` with:
+
+```dotenv
+NUXT_PUBLIC_API_BASE=http://localhost:8000
+```
+
+Ensure `ui/nuxt.config.ts` exposes `runtimeConfig.public.apiBase` so the frontend can read `NUXT_PUBLIC_API_BASE`.
+
+Start the frontend:
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000` in your browser. Keep both the Laravel and Nuxt terminals running.
+
+### 5. Verify the local setup
+
+- Confirm that the Nuxt homepage loads at `http://localhost:3000`.
+- Confirm that Laravel responds at `http://localhost:8000/up`.
+- Use a valid account to sign in via `POST /api/login`. The API returns a Sanctum token, which authenticated requests send as `Authorization: Bearer <token>`.
+- Test the reservation quote endpoint after signing in. A `401 Unauthenticated` response usually means the Bearer token was not sent or is invalid.
+
+**Troubleshooting:** If Laravel reports `could not find driver` for `pgsql`, enable the `pdo_pgsql` PHP extension used by the CLI (`php --ini` and `php -m`). If the browser reports CORS errors, check Laravel's allowed origin and ensure the frontend and backend URLs consistently use `localhost`. Restart the relevant development server after changing its `.env` file.
+
+**Security:** Never commit `.env` files, API tokens, database passwords, or other secrets. Share non-sensitive settings through `.env.example` files.
 
 ## Architecture
 
 ### Tier breakdown (Session 2 studio)
 
-| Tier | Responsibilities in THIS system | Example Classes/Modules |
-|------|--------------------------------|--------------------------|
-| Presentation | Captures user input, handles session state, triggers form validation, and renders views or serializes JSON. | Authentication; UserDashboard**; ToolManagement; ToolCatalog; ToolRequest; ToolReturn; UserProfile**; UserReview**; |
-| Service | Coordinates application workflows, authorization checks, and transaction boundaries. | ToolService; UserService; AuthService; ReservationService; ReviewService |
-| Domain | Contains core business logic, invariant enforcement, and state transitions independent of the database or UI. | Tool; User; Reservation; Review |
-| Data | Manages all direct queries, database migrations, model relationships, and transactional queries. | ToolStore; UserStore; ReservationStore; ReviewStore |
+| Tier         | Responsibilities in THIS system                                                                               | Example Classes/Modules                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Presentation | Captures user input, handles session state, triggers form validation, and renders views or serializes JSON.   | Authentication; UserDashboard**; ToolManagement; ToolCatalog; ToolRequest; ToolReturn; UserProfile**; UserReview\*\*; |
+| Service      | Coordinates application workflows, authorization checks, and transaction boundaries.                          | ToolService; UserService; AuthService; ReservationService; ReviewService                                              |
+| Domain       | Contains core business logic, invariant enforcement, and state transitions independent of the database or UI. | Tool; User; Reservation; Review                                                                                       |
+| Data         | Manages all direct queries, database migrations, model relationships, and transactional queries.              | ToolStore; UserStore; ReservationStore; ReviewStore                                                                   |
 
- **(Lender && Borrower)
+\*\*(Lender && Borrower)
 
 ### Tech Stack
+
 - Frontend: Vue.js 3 (Composition API) for a lightweight, responsive, and component-driven user interface.
 - Backend: PHP (Laravel) structured around a strict N-tier architecture (Presentation, Service, Domain, Data) to isolate business logic and routing.
 - Database & ORM: A single relational database (MySQL/PostgreSQL) managed via Eloquent ORM to handle transactional safety, data constraints, and optimistic/pessimistic locking.
@@ -100,7 +204,7 @@ classDiagram
         -phone: String
         -address: String
         -picture: String
-        -is_admin: Boolean       
+        -is_admin: Boolean
     }
 
     class Category {
@@ -172,8 +276,8 @@ sequenceDiagram
 
 Decisions live in [`docs/adr/`](docs/adr/). Start with ADR-001 in Session 4.
 
-| # | Decision | Status |
-|---|----------|--------|
+| #                          | Decision                     | Status     |
+| -------------------------- | ---------------------------- | ---------- |
 | [001](docs/adr/adr-001.md) | [What I am building and why] | [proposed] |
 
 ### AI-Assisted Development

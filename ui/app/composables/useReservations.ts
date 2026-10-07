@@ -2,8 +2,8 @@ export interface ReservationQuote {
   days: number
   daily_rate: number
   subtotal: number
-  fee_rate: number
-  fee: number
+  tax_rate: number
+  tax: number
   total_cost: number
 }
 

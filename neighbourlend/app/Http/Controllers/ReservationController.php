@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ReservationService;
 use App\Services\ToolService;
-use App\Repositories\Interfaces\ReservationRepositoryInterface;
+use App\Repositories\ReservationRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Domain\States\ReservationState;
@@ -15,7 +15,7 @@ class ReservationController extends Controller
     public function __construct(
         private ToolService $toolService,
         private ReservationService $reservationService,
-        private ReservationRepositoryInterface $reservationRepository
+        private ReservationRepository $reservationRepository
     ) {}
 
     public function store(ReservationRequest $request): JsonResponse
@@ -35,8 +35,7 @@ class ReservationController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $reservations = $this->reservationRepository
-            ->findByUserId($request->user()->id);
+        $reservations = $this->reservationRepository->findByUserId($request->user()->id);
 
         return response()->json([
             'data' => $reservations
