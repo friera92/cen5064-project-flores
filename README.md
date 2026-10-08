@@ -277,8 +277,10 @@ sequenceDiagram
 Decisions live in [`docs/adr/`](docs/adr/). Start with ADR-001 in Session 4.
 
 | #                          | Decision                     | Status     |
-| -------------------------- | ---------------------------- | ---------- |
-| [001](docs/adr/adr-001.md) | [What I am building and why] | [proposed] |
+| -------------------------- | ----------------------------- | ---------- |
+| [001](docs/adr/adr-001.md) | [Adopt a Three-Tier Architecture] | [accepted] |
+| [002](docs/adr/adr-002.md) | [Adopt Repository and Service Layer Patterns] | [accepted] |
+| [003](docs/adr/adr-003.md) | [Implement a Reservation State Machine] | [accepted] |
 
 ### AI-Assisted Development
 
