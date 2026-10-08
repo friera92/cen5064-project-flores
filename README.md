@@ -1,7 +1,7 @@
 # NeighbourLend: Community Equipment & Tool Sharing Hub
 
 <!--CI badge: after Session 4, replace ORG/REPO and the workflow filename, then uncomment:-->
-![CI](https://github.com/friera92/cen5064-project-flores.git/actions/workflows/ci.yml/badge.svg?branch=main)
+![CI](https://github.com/friera92/cen5064-project-flores/actions/workflows/ci.yml/badge.svg?branch=main)
 
 
 **Student:** Leduan Flores · **Course:** CEN 5064 Software Design, Fall 2026 · **Partner:** Dioni Dinza
