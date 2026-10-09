@@ -1,7 +1,10 @@
 
 <script setup lang="ts">
-import { demoReservations } from '~/data/reservations'
-import type { ReservationStatus } from '~/types/reservation'
+import type { Reservation, ReservationStatus } from '~/types/reservation'
+
+definePageMeta({
+  middleware: 'auth'
+})
 
 const selectedStatus = ref('ALL')
 
@@ -16,11 +19,18 @@ const statusOptions = [
   { label: 'Canceled', value: 'CANCELED' }
 ]
 
+const { getReservations } = useReservations()
+
+const reservations = ref<Reservation[]>([])
+const loading = ref(true)
+const errorMessage = ref('')
+
 const filteredReservations = computed(() =>
   selectedStatus.value === 'ALL'
-    ? demoReservations
-    : demoReservations.filter(
-        reservation => reservation.status === selectedStatus.value
+    ? reservations.value
+    : reservations.value.filter(
+        reservation =>
+          reservation.status === selectedStatus.value
       )
 )
 
@@ -49,8 +59,29 @@ function formatDate(value: string): string {
     day: 'numeric',
     year: 'numeric',
     timeZone: 'UTC'
-  }).format(new Date(`${value}T00:00:00Z`))
+  }).format(new Date(`${value}`))
 }
+
+async function loadReservations() {
+  loading.value = true
+  errorMessage.value = ''
+
+  try {
+    const response = await getReservations()
+    reservations.value = response.data
+  } catch (error) {
+    console.error(error)
+
+    errorMessage.value =
+      'Unable to load your reservations. Please try again.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadReservations()
+})
 </script>
 
 <template>
@@ -80,14 +111,6 @@ function formatDate(value: string): string {
         />
       </div>
 
-      <div
-        class="mt-8 rounded-xl border border-[#B8DCC8]
-               bg-[#E9F4ED] p-4 text-sm text-[#176B52]"
-      >
-        Demo data: these reservations are examples and
-        are not connected to your Laravel account yet.
-      </div>
-
       <div class="mt-8 max-w-xs">
         <label
           for="reservation-status"
@@ -107,7 +130,26 @@ function formatDate(value: string): string {
       </div>
 
       <div
-        v-if="filteredReservations.length"
+         v-if="loading"
+        class="mt-6 rounded-2xl border border-[#E5E9E4]
+               bg-white px-6 py-16 text-center"
+      >
+
+        <p class="mt-4 text-lg font-lighttext-[#172B25]">
+          Loading reservations...
+        </p>
+      </div>
+
+      <div
+        v-else-if="errorMessage"
+         class="mt-6 rounded-2xl border border-[#E5E9E4]
+               bg-white px-6 py-16 text-center"
+      >
+        <p class="mt-2 text-[#66736D]">{{ errorMessage }}</p>
+      </div>
+      
+      <div
+        v-else-if="filteredReservations.length"
         class="mt-6 grid gap-6"
       >
         <article
@@ -176,14 +218,22 @@ function formatDate(value: string): string {
                   </p>
 
                   <p class="mt-1 font-semibold text-[#172B25]">
-                    ${{ reservation.total_cost.toFixed(2) }}
+                    ${{ Number(reservation.total_cost).toFixed(2) }}
                   </p>
                 </div>
               </div>
 
               <div
-                class="mt-5 border-t border-[#E5E9E4] pt-4"
+                class="mt-5 flex flex-wrap gap-3
+                border-t border-[#E5E9E4] pt-4"
               >
+                <UButton
+                  :to="`/reservations/${reservation.id}`"
+                  label="View Reservation"
+                  icon="i-lucide-calendar-days"
+                  class="bg-[#176B52] text-white
+                        hover:bg-[#124D3D]"
+                />
                 <UButton
                   :to="`/equipment/${reservation.tool.id}`"
                   label="View Equipment"

@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/new', [ReservationController::class, 'store']);
         Route::get('/all', [ReservationController::class, 'index']);
         Route::get('/{reservation}', [ReservationController::class, 'show']);
+        Route::patch('/{reservation}/cancel', [ReservationController::class, 'cancel']);
         Route::post('/quote', [ReservationController::class, 'quote']);
     });
 });
