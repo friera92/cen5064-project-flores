@@ -60,6 +60,19 @@ class ReservationController extends Controller
         ]);
     }
 
+    public function cancel(Request $request, int $reservation): JsonResponse
+    {
+        $item = $this->reservationService->cancelReservation(
+            $reservation,
+            $request->user()->id
+        );
+
+        return response()->json([
+            'message' => 'Reservation canceled successfully.',
+            'data' => $item->load('tool'),
+        ]);
+    }
+
     public function quote(ReservationRequest $request): JsonResponse
     {
         $data = $request->validated();

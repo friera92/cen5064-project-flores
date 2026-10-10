@@ -1,10 +1,30 @@
-
 <script setup lang="ts">
-const navigation = [
-  { label: 'Explore', to: '/' },
+const { user, isAuthenticated, logout } = useAuth()
+
+const publicNavigation = [
+  { label: 'Explore', to: '/' }
+]
+
+const authenticatedNavigation = [
   { label: 'My Reservations', to: '/reservations' },
   { label: 'My Listings', to: '/my-equipment' }
 ]
+
+const navigation = computed(() => {
+  if (!isAuthenticated.value) {
+    return publicNavigation
+  }
+
+  return [
+    ...publicNavigation,
+    ...authenticatedNavigation
+  ]
+})
+
+async function handleLogout() {
+  await logout()
+  await navigateTo('/')
+}
 </script>
 
 <template>
@@ -47,21 +67,75 @@ const navigation = [
 
       <!-- Actions -->
       <div class="flex items-center gap-3">
-        <UButton
-          to="/my-equipment/create"
-          label="List an Item"
-          icon="i-lucide-plus"
-          class="hidden bg-[#176B52] text-white
-                 hover:bg-[#124D3D] sm:flex"
-        />
+        <!-- Authenticated user actions -->
+        <template v-if="isAuthenticated">
+          <UButton
+            to="/my-equipment/create"
+            label="List an Item"
+            icon="i-lucide-plus"
+            class="hidden bg-[#176B52] text-white
+                   hover:bg-[#124D3D] sm:flex"
+          />
 
-        <UButton
-          to="/login"
-          icon="i-lucide-user-round"
-          color="neutral"
-          variant="ghost"
-          aria-label="Account"
-        />
+          <div
+            class="hidden items-center gap-2 text-sm font-medium
+                   text-[#172B25] sm:flex"
+          >
+            <UIcon
+              name="i-lucide-user-round"
+              class="size-5 text-[#176B52]"
+            />
+            <span>
+              Hi, {{ user?.name ?? 'User' }}
+            </span>
+          </div>
+
+          <UButton
+            label="Log out"
+            icon="i-lucide-log-out"
+            color="neutral"
+            variant="ghost"
+            class="hidden sm:flex"
+            @click="handleLogout"
+          />
+
+          <UButton
+            icon="i-lucide-log-out"
+            color="neutral"
+            variant="ghost"
+            class="sm:hidden"
+            aria-label="Log out"
+            @click="handleLogout"
+          />
+        </template>
+
+        <!-- Guest actions -->
+        <template v-else>
+          <UButton
+            to="/login"
+            label="Log in"
+            icon="i-lucide-user-round"
+            color="neutral"
+            variant="ghost"
+            class="hidden sm:flex"
+          />
+
+          <UButton
+            to="/login"
+            icon="i-lucide-user-round"
+            color="neutral"
+            variant="ghost"
+            class="sm:hidden"
+            aria-label="Log in"
+          />
+
+          <UButton
+            to="/register"
+            label="Sign up"
+            class="hidden bg-[#176B52] text-white
+                   hover:bg-[#124D3D] sm:flex"
+          />
+        </template>
 
         <UDropdownMenu
           :items="navigation"

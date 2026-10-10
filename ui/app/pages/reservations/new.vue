@@ -1,11 +1,18 @@
 
 <script setup lang="ts">
 import { equipment } from '~/data/equipment'
-import type { ReservationQuote } from '~/composables/useReservations'
+import type { ReservationQuote } from '~/types/reservation'
+
+definePageMeta({
+  middleware: 'auth'
+})
 
 const route = useRoute()
 
-const { getQuote } = useReservations()
+const { getQuote, createReservation } = useReservations()
+
+const reservationLoading = ref(false)
+const reservationError = ref('')
 
 const quote = ref<ReservationQuote | null>(null)
 const quoteLoading = ref(false)
@@ -21,19 +28,17 @@ const today = ref('')
 
 const validDates = computed(() =>
   Boolean(
-    startDate.value
-    && endDate.value
-    && startDate.value >= today.value
-    && endDate.value >= startDate.value
+	startDate.value
+	&& endDate.value
+	&& startDate.value >= today.value
+	&& endDate.value >= startDate.value
   )
 )
 
-const submitted = ref(false)
-
 if (!tool) {
   throw createError({
-    statusCode: 404,
-    statusMessage: 'Equipment not found'
+	statusCode: 404,
+	statusMessage: 'Equipment not found'
   })
 }
 
@@ -44,51 +49,44 @@ onMounted(() => {
 watch(
   [startDate, endDate],
   async () => {
-    submitted.value = false
-    quote.value = null
-    quoteError.value = ''
+	quote.value = null
+	quoteError.value = ''
+	reservationError.value = ''
 
-    if (
-      startDate.value
-      && endDate.value
-      && endDate.value < startDate.value
-    ) {
-      endDate.value = ''
-      return
-    }
+	if (
+	  startDate.value
+	  && endDate.value
+	  && endDate.value < startDate.value
+	) {
+	  endDate.value = ''
+	  return
+	}
 
-    if (!validDates.value) {
-      return
-    }
+	if (!validDates.value) {
+	  return
+	}
 
-    quoteLoading.value = true
+	quoteLoading.value = true
 
-    try {
-      const response = await getQuote({
-        tool_id: tool.id,
-        start_date: startDate.value,
-        end_date: endDate.value
-      })
+	try {
+	  const response = await getQuote({
+		tool_id: tool.id,
+		start_date: startDate.value,
+		end_date: endDate.value
+	  })
 
-      quote.value = response.data
-      console.log(quote.value)
-    } catch (error) {
-      console.error(error)
+	  quote.value = response.data
+	  console.log(quote.value)
+	} catch (error) {
+	  console.error(error)
 
-      quoteError.value =
-        'Unable to calculate the estimated cost.'
-    } finally {
-      quoteLoading.value = false
-    }
+	  quoteError.value =
+		'Unable to calculate the estimated cost.'
+	} finally {
+	  quoteLoading.value = false
+	}
   }
 )
-
-function submitDemoRequest() {
-  if (!validDates.value) return
-
-  // Demo only: no API call and no persisted reservation.
-  submitted.value = true
-}
 
 function queryString(value: unknown): string {
   return typeof value === 'string' ? value : ''
@@ -102,233 +100,261 @@ function localToday(): string {
 
   return `${year}-${month}-${day}`
 }
+
+async function handleReservation() {
+  reservationError.value = ''
+
+  if (!tool?.id) {
+    reservationError.value = 'Tool information is unavailable.'
+    return
+  }
+
+  if (!startDate.value || !endDate.value) {
+    reservationError.value =
+      'Please select the reservation dates.'
+    return
+  }
+
+  if (!quote.value) {
+    reservationError.value =
+      'Please calculate the estimated cost before reserving.'
+    return
+  }
+
+  reservationLoading.value = true
+
+  try {
+    const response = await createReservation({
+      tool_id: tool?.id,
+      start_date: startDate.value,
+      end_date: endDate.value
+    })
+
+    await navigateTo('/reservations')
+  } catch (error: any) {
+    console.error(error)
+
+    if (error?.status === 422) {
+      reservationError.value =
+        'Please check the selected reservation dates.'
+    } else if (error?.status === 409) {
+      reservationError.value =
+        'This tool is no longer available for the selected dates.'
+    } else {
+      reservationError.value =
+        error?.data?.message ??
+        'Unable to create the reservation. Please try again.'
+    }
+  } finally {
+    reservationLoading.value = false
+  }
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-[#FAF9F6]">
-    <AppHeader />
+	<AppHeader />
 
-    <UContainer class="max-w-5xl py-10 md:py-14">
-      <NuxtLink
-        :to="`/equipment/${tool.id}`"
-        class="inline-flex items-center gap-2 text-sm
-               font-medium text-[#176B52]"
-      >
-        <UIcon name="i-lucide-arrow-left" class="size-4" />
-        Back to equipment
-      </NuxtLink>
+	<UContainer class="max-w-5xl py-10 md:py-14">
+	  <NuxtLink
+		:to="`/equipment/${tool.id}`"
+		class="inline-flex items-center gap-2 text-sm
+			   font-medium text-[#176B52]"
+	  >
+		<UIcon name="i-lucide-arrow-left" class="size-4" />
+		Back to equipment
+	  </NuxtLink>
 
-      <div class="mt-8">
-        <h1 class="text-3xl font-bold text-[#172B25]">
-          Request Reservation
-        </h1>
+	  <div class="mt-8">
+		<h1 class="text-3xl font-bold text-[#172B25]">
+		  Request Reservation
+		</h1>
 
-        <p class="mt-2 text-[#66736D]">
-          Review your dates and estimated cost.
-        </p>
-      </div>
+		<p class="mt-2 text-[#66736D]">
+		  Review your dates and estimated cost.
+		</p>
+	  </div>
 
-      <div
-        v-if="submitted"
-        role="status"
-        class="mt-8 rounded-2xl border border-[#B8DCC8]
-               bg-[#E9F4ED] p-6"
-      >
-        <div class="flex items-start gap-3">
-          <UIcon
-            name="i-lucide-check-circle-2"
-            class="mt-1 size-6 shrink-0 text-[#176B52]"
-          />
+	  <div
+		class="mt-8 grid grid-cols-1 items-start gap-8
+			   lg:grid-cols-[minmax(0,1fr)_340px]"
+	  >
+		<!-- Reservation form -->
+		<section
+		  class="rounded-2xl border border-[#E5E9E4]
+				 bg-white p-6"
+		>
+		  <h2 class="text-xl font-semibold text-[#172B25]">
+			Rental dates
+		  </h2>
 
-          <div>
-            <h2 class="text-xl font-semibold text-[#172B25]">
-              Demo request reviewed
-            </h2>
+		  <p class="mt-2 text-sm text-[#66736D]">
+			Choose when you would like to borrow this item.
+		  </p>
 
-            <p class="mt-2 text-[#456456]">
-              Your reservation details are ready.
-              No request has been sent or saved yet.
-              We'll enable submission when the
-              Laravel reservation API is connected.
-            </p>
+		  <form
+			id="reservation-form"
+			class="mt-6 space-y-5"
+			@submit.prevent="handleReservation"
+		  >
+			<label class="block">
+				<span class="mb-2 block text-sm font-medium text-[#172B25]">
+					Start date
+				</span>
 
-            <UButton
-              to="/"
-              label="Explore more equipment"
-              variant="outline"
-              color="neutral"
-              class="mt-5"
-            />
-          </div>
-        </div>
-      </div>
+				<input
+					v-model="startDate"
+					type="date"
+					required
+					:min="today"
+					class="w-full rounded-xl border border-[#E5E9E4]
+						bg-white px-4 py-3 text-[#172B25]"
+				>
+			</label>
 
-      <div
-        v-else
-        class="mt-8 grid grid-cols-1 items-start gap-8
-               lg:grid-cols-[minmax(0,1fr)_340px]"
-      >
-        <!-- Reservation form -->
-        <section
-          class="rounded-2xl border border-[#E5E9E4]
-                 bg-white p-6"
-        >
-          <h2 class="text-xl font-semibold text-[#172B25]">
-            Rental dates
-          </h2>
+		   <label class="block">
+				<span class="mb-2 block text-sm font-medium text-[#172B25]">
+					End date
+				</span>
 
-          <p class="mt-2 text-sm text-[#66736D]">
-            Choose when you would like to borrow this item.
-          </p>
+				<input
+					v-model="endDate"
+					type="date"
+					:min="startDate || undefined"
+					required
+					class="w-full rounded-xl border border-[#E5E9E4]
+						bg-white px-4 py-3 text-[#172B25]"
+				>
+			</label>
 
-          <form
-            id="reservation-form"
-            class="mt-6 space-y-5"
-            @submit.prevent="submitDemoRequest"
-          >
-            <label class="block">
-  <span class="mb-2 block text-sm font-medium text-[#172B25]">
-    Start date
-  </span>
+			<p
+			  v-if="startDate && endDate && !validDates"
+			  class="text-sm text-red-600"
+			>
+			  Please select a valid date range.
+			</p>
 
-  <input
-    v-model="startDate"
-    type="date"
-    required
-    class="w-full rounded-xl border border-[#E5E9E4]
-           bg-white px-4 py-3 text-[#172B25]"
-  >
-</label>
+			<div
+			  class="rounded-xl bg-[#FAF9F6] p-4
+					 text-sm text-[#66736D]"
+			>
+			  Availability for these dates has not been checked.
+			  Your request will require approval and
+			  validation by the reservation service.
+			</div>
+		  </form>
+		</section>
 
-           <label class="block">
-  <span class="mb-2 block text-sm font-medium text-[#172B25]">
-    End date
-  </span>
+		<!-- Summary -->
+		<aside
+		  class="rounded-2xl border border-[#E5E9E4]
+				 bg-white p-5"
+		>
+		  <div class="flex gap-4">
+			<img
+			  :src="tool.picture"
+			  :alt="tool.title"
+			  class="size-24 rounded-xl bg-[#E9F4ED]
+					 object-cover"
+			>
 
-  <input
-    v-model="endDate"
-    type="date"
-    :min="startDate || undefined"
-    required
-    class="w-full rounded-xl border border-[#E5E9E4]
-           bg-white px-4 py-3 text-[#172B25]"
-  >
-</label>
+			<div class="min-w-0">
+			  <p class="text-xs text-[#176B52]">
+				{{ tool.category.name }}
+			  </p>
 
-            <p
-              v-if="startDate && endDate && !validDates"
-              class="text-sm text-red-600"
-            >
-              Please select a valid date range.
-            </p>
+			  <h3 class="mt-1 font-semibold text-[#172B25]">
+				{{ tool.title }}
+			  </h3>
 
-            <div
-              class="rounded-xl bg-[#FAF9F6] p-4
-                     text-sm text-[#66736D]"
-            >
-              Availability for these dates has not been checked.
-              Your request will require approval and
-              validation by the reservation service.
-            </div>
+			  <p class="mt-2 text-sm text-[#66736D]">
+				{{ tool.owner.address }}
+			  </p>
+			</div>
+		  </div>
 
-            <UButton
-              type="submit"
-              label="Review Demo Request"
-              icon="i-lucide-calendar-check"
-              block
-              size="xl"
-              :disabled="!validDates"
-              class="bg-[#176B52] text-white hover:bg-[#124D3D]"
-            />
-          </form>
-        </section>
+		  <div class="mt-6 space-y-3 border-t border-[#E5E9E4]
+				  pt-5 text-sm">
+			<div class="flex justify-between text-[#66736D]">
+			  <span>Daily rate</span>
+			  <span>${{ tool.daily_rate.toFixed(2) }}</span>
+			</div>
 
-        <!-- Summary -->
-        <aside
-          class="rounded-2xl border border-[#E5E9E4]
-                 bg-white p-5"
-        >
-          <div class="flex gap-4">
-            <img
-              :src="tool.picture"
-              :alt="tool.title"
-              class="size-24 rounded-xl bg-[#E9F4ED]
-                     object-cover"
-            >
+			<div class="flex justify-between text-[#66736D]">
+			  <span>Rental days</span>
+			  <span>{{ quote?.days ?? '—' }}</span>
+			</div>
 
-            <div class="min-w-0">
-              <p class="text-xs text-[#176B52]">
-                {{ tool.category.name }}
-              </p>
+			<div class="flex justify-between text-[#66736D]">
+			  <span>Subtotal</span>
+			  <span>
+				{{ quote ? `$${quote.subtotal.toFixed(2)}` : '—' }}
+			  </span>
+			</div>
 
-              <h3 class="mt-1 font-semibold text-[#172B25]">
-                {{ tool.title }}
-              </h3>
+			<div class="flex justify-between text-[#66736D]">
+			  <span>Estimated fee</span>
+			  <span>
+				{{ quote ? `$${quote.tax.toFixed(2)}` : '—' }}
+			  </span>
+			</div>
 
-              <p class="mt-2 text-sm text-[#66736D]">
-                {{ tool.owner.address }}
-              </p>
-            </div>
-          </div>
+			<p
+			  v-if="quoteLoading"
+			  class="text-sm text-[#66736D]"
+			>
+			  Calculating estimated cost...
+			</p>
 
-          <div class="mt-6 space-y-3 border-t border-[#E5E9E4]
-                  pt-5 text-sm">
-            <div class="flex justify-between text-[#66736D]">
-              <span>Daily rate</span>
-              <span>${{ tool.daily_rate.toFixed(2) }}</span>
-            </div>
+			<p
+			  v-if="quoteError"
+			  class="text-sm text-red-600"
+			>
+			  {{ quoteError }}
+			</p>
 
-            <div class="flex justify-between text-[#66736D]">
-              <span>Rental days</span>
-              <span>{{ quote?.days ?? '—' }}</span>
-            </div>
+			<div
+			  class="flex justify-between border-t
+					border-[#E5E9E4] pt-4 text-base
+					font-semibold text-[#172B25]"
+			>
+			  <span>Estimated total</span>
 
-            <div class="flex justify-between text-[#66736D]">
-              <span>Subtotal</span>
-              <span>
-                {{ quote ? `$${quote.subtotal.toFixed(2)}` : '—' }}
-              </span>
-            </div>
+			  <span>
+				{{
+				  quote
+					? `$${quote.total_cost.toFixed(2)}`
+					: '—'
+				}}
+			  </span>
+			</div>
 
-            <div class="flex justify-between text-[#66736D]">
-              <span>Estimated fee</span>
-              <span>
-                {{ quote ? `$${quote.tax.toFixed(2)}` : '—' }}
-              </span>
-            </div>
+			<p
+				v-if="reservationError"
+				class="mt-4 text-sm text-red-600"
+				>
+				{{ reservationError }}
+			</p>
 
-            <p
-              v-if="quoteLoading"
-              class="text-sm text-[#66736D]"
-            >
-              Calculating estimated cost...
-            </p>
-
-            <p
-              v-if="quoteError"
-              class="text-sm text-red-600"
-            >
-              {{ quoteError }}
-            </p>
-
-            <div
-              class="flex justify-between border-t
-                    border-[#E5E9E4] pt-4 text-base
-                    font-semibold text-[#172B25]"
-            >
-              <span>Estimated total</span>
-
-              <span>
-                {{
-                  quote
-                    ? `$${quote.total_cost.toFixed(2)}`
-                    : '—'
-                }}
-              </span>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </UContainer>
+			<button
+				type="button"
+				:disabled="!quote || reservationLoading"
+				class="mt-6 w-full rounded-lg bg-[#176B52]
+					px-4 py-3 font-semibold text-white
+					transition hover:bg-[#124D3D]
+					disabled:cursor-not-allowed
+					disabled:opacity-60"
+				@click="handleReservation"
+				>
+				{{
+				reservationLoading
+					? 'Requesting reservation...'
+					: 'Request reservation'
+				}}
+			</button>
+		  </div>
+		</aside>
+	  </div>
+	</UContainer>
   </div>
 </template>

@@ -1,46 +1,51 @@
-export interface ReservationQuote {
-  days: number
-  daily_rate: number
-  subtotal: number
-  tax_rate: number
-  tax: number
-  total_cost: number
-}
-
-export interface ReservationPayload {
-  tool_id: number
-  start_date: string
-  end_date: string
-}
+import type {
+  Reservation,
+  ReservationPayload,
+  ReservationQuote,
+} from "~/types/reservation";
 
 export function useReservations() {
-  const { request } = useApi()
+  const { request } = useApi();
 
   function getQuote(data: ReservationPayload) {
-    return request<{ data: ReservationQuote }>(
-      '/api/reservation/quote',
-      {
-        method: 'POST',
-        body: data
-      }
-    )
+    return request<{ data: ReservationQuote }>("/api/reservation/quote", {
+      method: "POST",
+      body: data,
+    });
   }
 
   function createReservation(data: ReservationPayload) {
     return request<{
-      message: string
-      data: { id: number }
-    }>(
-      '/api/reservation/new',
-      {
-        method: 'POST',
-        body: data
-      }
-    )
+      message: string;
+      data: { id: number };
+    }>("/api/reservation/new", {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  function getReservations() {
+    return request<{ data: Reservation[] }>("/api/reservation/all");
+  }
+
+  function getReservation(id: number) {
+    return request<{ data: Reservation }>(`/api/reservation/${id}`);
+  }
+
+  function cancelReservation(id: number) {
+    return request<{
+      message: string;
+      data: Reservation;
+    }>(`/api/reservation/${id}/cancel`, {
+      method: "PATCH",
+    });
   }
 
   return {
     getQuote,
-    createReservation
-  }
+    createReservation,
+    getReservations,
+    getReservation,
+    cancelReservation,
+  };
 }
