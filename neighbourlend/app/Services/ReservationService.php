@@ -59,6 +59,7 @@ class ReservationService
             );
 
             $data['total_cost'] = $cost['total_cost'];
+            $data['status'] = ReservationState::REQUESTED;
 
             return $this->reservationRepository->create($data);
         });
