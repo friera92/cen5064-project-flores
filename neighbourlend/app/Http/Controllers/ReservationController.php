@@ -23,7 +23,6 @@ class ReservationController extends Controller
         $data = $request->validated();
 
         $data['borrower_id'] = $request->user()->id;
-        $data['status'] = ReservationState::REQUESTED;
 
         $reservation = $this->reservationService->requestTool($data);
 
