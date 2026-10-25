@@ -12,7 +12,19 @@ NeighbourLend is a monolithic, three-tier web application designed to facilitate
 
 Catalog & Availability Filtering: Item discovery with dynamic availability verification based on reserved date ranges.
 
-Reservation State Engine: An end-to-end booking workflow enforcing valid state transitions (Requested → Approved → Active → Returned → Inspected/Completed).
+Reservation State Engine: An end-to-end booking workflow that enforces valid state transitions through domain-level business rules.
+
+Supported Reservation Flows:
+
+REQUESTED → CANCELED
+
+REQUESTED → APPROVED → CANCELED
+
+REQUESTED → APPROVED → ACTIVE → RETURNED → CLOSED
+
+REQUESTED → APPROVED → ACTIVE → RETURNED → DISPUTED
+
+Future Improvements: The transition to DISPUTED is supported by the backend when a returned tool is reported as damaged, broken, or missing parts. However, the complete dispute management and resolution workflow, including administrative review and resolution actions, is planned for future iterations.
 
 Double-Booking & Conflict Validation: Strict domain logic preventing overlapping active reservations for the same physical asset.
 
