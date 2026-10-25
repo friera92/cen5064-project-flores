@@ -1,8 +1,8 @@
 # NeighbourLend: Community Equipment & Tool Sharing Hub
 
 <!--CI badge: after Session 4, replace ORG/REPO and the workflow filename, then uncomment:-->
-![CI](https://github.com/friera92/cen5064-project-flores/actions/workflows/ci.yml/badge.svg?branch=main)
 
+![CI](https://github.com/friera92/cen5064-project-flores/actions/workflows/ci.yml/badge.svg?branch=main)
 
 **Student:** Leduan Flores · **Course:** CEN 5064 Software Design, Fall 2026 · **Partner:** Dioni Dinza
 
@@ -12,7 +12,7 @@ NeighbourLend is a monolithic, three-tier web application designed to facilitate
 
 Catalog & Availability Filtering: Item discovery with dynamic availability verification based on reserved date ranges.
 
-Reservation State Engine: An end-to-end booking workflow enforcing valid state transitions (Requested → Approved → Active → Returned → Inspected/Completed).
+Reservation State Engine: An end-to-end booking workflow enforcing valid state transitions (Requested → Canceled → Approved → Active → Returned → Closed → Disputed).
 
 Double-Booking & Conflict Validation: Strict domain logic preventing overlapping active reservations for the same physical asset.
 
@@ -276,11 +276,11 @@ sequenceDiagram
 
 Decisions live in [`docs/adr/`](docs/adr/). Start with ADR-001 in Session 4.
 
-| #                          | Decision                     | Status     |
-| -------------------------- | ----------------------------- | ---------- |
-| [001](docs/adr/adr-001.md) | [Adopt a Three-Tier Architecture] | [accepted] |
+| #                          | Decision                                      | Status     |
+| -------------------------- | --------------------------------------------- | ---------- |
+| [001](docs/adr/adr-001.md) | [Adopt a Three-Tier Architecture]             | [accepted] |
 | [002](docs/adr/adr-002.md) | [Adopt Repository and Service Layer Patterns] | [accepted] |
-| [003](docs/adr/adr-003.md) | [Implement a Reservation State Machine] | [accepted] |
+| [003](docs/adr/adr-003.md) | [Implement a Reservation State Machine]       | [accepted] |
 
 ### AI-Assisted Development
 
