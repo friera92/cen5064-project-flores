@@ -10,6 +10,11 @@ use App\Domain\Models\Tool;
 use App\Policies\ReviewPolicy;
 use App\Policies\ToolPolicy;
 
+use App\Repositories\ReservationRepository;
+use App\Repositories\ToolRepository;
+use App\Repositories\Interfaces\ReservationRepositoryInterface;
+use App\Repositories\Interfaces\ToolRepositoryInterface;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -17,7 +22,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            ReservationRepositoryInterface::class,
+            ReservationRepository::class
+        );
+
+        $this->app->bind(
+            ToolRepositoryInterface::class,
+            ToolRepository::class
+        );
     }
 
     /**
