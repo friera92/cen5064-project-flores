@@ -6,6 +6,7 @@ use App\Domain\States\ReservationState;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domain\States\ToolReturnedCondition;
+use DomainException;
 
 class Reservation extends Model
 {
@@ -47,5 +48,19 @@ class Reservation extends Model
     public function reviews()
     {
         return $this->hasMany(Review::class, 'reservation_id');
+    }
+
+    public function transitionTo(ReservationState $newState): void
+    {
+        $currentState = $this->status;
+
+        if (!$currentState->canTransitionTo($newState)) {
+            throw new DomainException(
+                "Invalid reservation transition: " .
+                    "{$currentState->value} -> {$newState->value}"
+            );
+        }
+
+        $this->status = $newState;
     }
 }

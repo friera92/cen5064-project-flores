@@ -3,16 +3,13 @@
 namespace App\Services;
 
 use App\Domain\States\ToolStatus;
-use App\Domain\States\ToolReturnedCondition;
 use App\Domain\States\ReservationState;
 use App\Repositories\Interfaces\ReservationRepositoryInterface;
 use App\Repositories\Interfaces\ToolRepositoryInterface;
-use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\CarbonImmutable;
-use InvalidArgumentException;
-use DomainException;
 use Exception;
+use InvalidArgumentException;
 
 class ReservationService
 {
@@ -84,13 +81,9 @@ class ReservationService
                 throw new Exception('You are not authorized to approve this reservation.');
             }
 
-            $this->ensureTransitionAllowed(
-                $reservation,
-                ReservationState::APPROVED
-            );
+            // Verify state transition & Update the reservation status to APPROVED
+            $reservation->transitionTo(ReservationState::APPROVED);
 
-            // Update the reservation status to APPROVED
-            $reservation->status = ReservationState::APPROVED;
             $result = $this->reservationRepository->save($reservation);
 
             if (!$result) {
@@ -116,216 +109,19 @@ class ReservationService
                 throw new Exception('You are not authorized to cancel this reservation.');
             }
 
-            $this->ensureTransitionAllowed(
-                $reservation,
-                ReservationState::CANCELED
-            );
-
             if ($reservation->status === ReservationState::APPROVED && !$isBorrower) {
                 throw new Exception(
                     'Only the borrower can cancel an approved reservation.'
                 );
             }
 
-            // Update the reservation status to CANCELED
-            $reservation->status = ReservationState::CANCELED;
+            // Verify state transition & Update the reservation status to CANCELED
+            $reservation->transitionTo(ReservationState::CANCELED);
+
             $result = $this->reservationRepository->save($reservation);
 
             if (!$result) {
                 throw new Exception('Failed to cancel the reservation.');
-            }
-
-            return $reservation;
-        });
-    }
-
-    public function handOffTool(int $reservationId, int $userId)
-    {
-        return DB::transaction(function () use ($reservationId, $userId) {
-            $reservation = $this->reservationRepository->findById($reservationId);
-            if (!$reservation) {
-                throw new Exception('Reservation not found.');
-            }
-
-            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
-            if (!$tool) {
-                throw new Exception('Tool not found.');
-            }
-
-            // Authorization: Lender only
-            if ($tool->owner_id !== $userId) {
-                throw new Exception('Only the tool owner can hand off the tool.');
-            }
-
-            $this->ensureTransitionAllowed(
-                $reservation,
-                ReservationState::ACTIVE
-            );
-
-            // Update the reservation status to ACTIVE
-            $reservation->status = ReservationState::ACTIVE;
-            $result = $this->reservationRepository->save($reservation);
-
-            $tool->availability_status = ToolStatus::IN_USE;
-            $saveTool = $this->toolRepository->save($tool);
-
-            if (!$result || !$saveTool) {
-                throw new Exception('Failed to hand off the tool.');
-            }
-
-            return $reservation;
-        });
-    }
-
-    public function returnTool(int $reservationId, int $userId)
-    {
-        return DB::transaction(function () use ($reservationId, $userId) {
-            $reservation = $this->reservationRepository->findById($reservationId);
-            if (!$reservation) {
-                throw new Exception('Reservation not found.');
-            }
-
-            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
-            if (!$tool) {
-                throw new Exception('Tool not found.');
-            }
-
-            // Authorization: Borrower only
-            if ($reservation->borrower_id !== $userId) {
-                throw new Exception('Only the borrower can return the tool.');
-            }
-
-            $this->ensureTransitionAllowed(
-                $reservation,
-                ReservationState::RETURNED
-            );
-
-            // Update the reservation status to RETURNED
-            $reservation->status = ReservationState::RETURNED;
-            $result = $this->reservationRepository->save($reservation);
-
-            $tool->availability_status = ToolStatus::INSPECTION; // Set the tool status to INSPECTION after return
-            $saveTool = $this->toolRepository->save($tool);
-
-            if (!$result || !$saveTool) {
-                throw new Exception('Failed to return the tool.');
-            }
-
-            return $reservation;
-        });
-    }
-
-    public function inspectTool(int $reservationId, string $returnedCondition, int $userId)
-    {
-        return DB::transaction(function () use ($reservationId, $returnedCondition, $userId) {
-            $reservation = $this->reservationRepository->findById($reservationId);
-            if (!$reservation) {
-                throw new Exception('Reservation not found.');
-            }
-
-            if (!$reservation->status->canBeInspected()) {
-                throw new DomainException(
-                    'Only returned reservations can be inspected.'
-                );
-            }
-
-            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
-            if (!$tool) {
-                throw new Exception('Tool not found.');
-            }
-
-            // Authorization: Lender only
-            if ($tool->owner_id !== $userId) {
-                throw new Exception('Only the tool owner can inspect the tool.');
-            }
-
-            $reservation->returned_condition = $returnedCondition;
-
-            switch ($returnedCondition) {
-                case 'GOOD':
-                    // Reservation remains RETURNED until closing.
-                    break;
-                case 'DAMAGED':
-                    $tool->availability_status = ToolStatus::MAINTENANCE;
-
-                    $this->ensureTransitionAllowed(
-                        $reservation,
-                        ReservationState::DISPUTED
-                    );
-
-                    $reservation->status = ReservationState::DISPUTED;
-
-                    break;
-                case 'BROKEN':
-                case 'MISSING_PARTS':
-                    $tool->availability_status = ToolStatus::RETIRED;
-
-
-                    $this->ensureTransitionAllowed(
-                        $reservation,
-                        ReservationState::DISPUTED
-                    );
-                    $reservation->status = ReservationState::DISPUTED;
-
-                    break;
-                default:
-                    throw new InvalidArgumentException(
-                        'Invalid returned condition.'
-                    );
-            }
-
-            $saveTool = $this->toolRepository->save($tool);
-            $saveReservation = $this->reservationRepository->save($reservation);
-
-            if (!$saveTool || !$saveReservation) {
-                throw new Exception('Failed to update the tool condition after inspection.');
-            }
-
-            return $reservation;
-        });
-    }
-
-    public function closeReservation(int $reservationId, int $userId)
-    {
-        return DB::transaction(function () use ($reservationId, $userId) {
-            $reservation = $this->reservationRepository->findById($reservationId);
-            if (!$reservation) {
-                throw new Exception('Reservation not found.');
-            }
-
-            $this->ensureTransitionAllowed(
-                $reservation,
-                ReservationState::CLOSED
-            );
-
-            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
-            if (!$tool) {
-                throw new Exception('Tool not found.');
-            }
-
-            // Authorization: Lender only
-            if ($tool->owner_id !== $userId) {
-                throw new Exception('Only the tool owner can close the reservation.');
-            }
-
-            if ($tool->availability_status === ToolStatus::INSPECTION && $reservation->returned_condition !== ToolReturnedCondition::GOOD) {
-                throw new Exception('Tool is still under inspection or has pending issues.');
-            }
-
-            if ($reservation->returned_condition == ToolReturnedCondition::GOOD) {
-                $tool->availability_status = ToolStatus::AVAILABLE;
-            } else {
-                throw new Exception('The tool condition is not valid for closing the reservation and might be on dispute.');
-            }
-
-            $toolSaved = $this->toolRepository->save($tool);
-
-            // Update the reservation status to CLOSED
-            $reservation->status = ReservationState::CLOSED;
-            $result = $this->reservationRepository->save($reservation);
-
-            if (!$result || !$toolSaved) {
-                throw new Exception('Failed to close the reservation.');
             }
 
             return $reservation;
@@ -369,17 +165,5 @@ class ReservationService
             'tax' => $fee,
             'total_cost' => round($subtotal + $fee, 2),
         ];
-    }
-
-    private function ensureTransitionAllowed(Reservation $reservation, ReservationState $newState): void
-    {
-        $currentState = $reservation->status;
-
-        if (!$currentState->canTransitionTo($newState)) {
-            throw new DomainException(
-                "Invalid reservation transition: " .
-                    "{$currentState->value} -> {$newState->value}"
-            );
-        }
     }
 }
