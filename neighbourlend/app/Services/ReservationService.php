@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Domain\States\ToolStatus;
 use App\Domain\States\ToolReturnedCondition;
 use App\Domain\States\ReservationState;
-use App\Repositories\ReservationRepository;
-use App\Repositories\ToolRepository;
-use App\Domain\Models\Reservation;
+use App\Repositories\Interfaces\ReservationRepositoryInterface;
+use App\Repositories\Interfaces\ToolRepositoryInterface;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
@@ -17,8 +17,8 @@ use Exception;
 class ReservationService
 {
     public function __construct(
-        private ReservationRepository $reservationRepository,
-        private ToolRepository $toolRepository
+        private ReservationRepositoryInterface $reservationRepository,
+        private ToolRepositoryInterface $toolRepository
     ) {}
 
     public function requestTool(array $data)
