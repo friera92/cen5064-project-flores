@@ -7,15 +7,6 @@ use App\Repositories\Interfaces\ToolRepositoryInterface;
 
 class ToolRepository implements ToolRepositoryInterface
 {
-    public function getAllTools()
-    {
-        return Tool::all();
-    }
-
-    public function getToolById($id)
-    {
-        return Tool::find($id);
-    }
 
     public function create(array $data): ?Tool
     {

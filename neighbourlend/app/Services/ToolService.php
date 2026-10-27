@@ -51,32 +51,46 @@ class ToolService
         });
     }
 
+
     public function deleteTool(Tool $tool): bool
     {
-        return DB::transaction(function () use ($tool) {
-            if ($this->toolRepository->findById($tool->id) === null) {
-                throw new Exception("Tool not found");
+        return DB::transaction(function () use ($tool): bool {
+
+            $tool = $this->toolRepository
+                ->findByIdWithLock($tool->id);
+
+            if (!$tool) {
+                throw new Exception('Tool not found.');
             }
 
-            $hasActiveReservations = $tool->reservations()
-                ->whereIn('status', [
-                    ReservationState::REQUESTED->value,
-                    ReservationState::APPROVED->value,
-                    ReservationState::ACTIVE->value,
-                ])
+            $blockingStatuses = [
+                ReservationState::REQUESTED->value,
+                ReservationState::APPROVED->value,
+                ReservationState::ACTIVE->value,
+                ReservationState::RETURNED->value,
+                ReservationState::DISPUTED->value,
+            ];
+
+            $hasBlockingReservations = $tool->reservations()
+                ->whereIn('status', $blockingStatuses)
                 ->exists();
 
-            if ($hasActiveReservations) {
-                throw new Exception('Cannot delete tool while you have active or pending reservations.');
+            if ($hasBlockingReservations) {
+                throw new Exception(
+                    'Cannot remove a tool with pending, active, returned, or disputed reservations.'
+                );
             }
 
             $deleted = $this->toolRepository->delete($tool->id);
 
             if (!$deleted) {
-                throw new Exception('Failed to delete the tool.');
+                throw new Exception('Failed to remove the tool.');
             }
+
+            return true;
         });
     }
+
 
     public function getToolById(int $id): ?Tool
     {

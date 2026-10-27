@@ -22,7 +22,6 @@ return new class extends Migration
             $table->string('condition')->default('CREATED'); // Enum: CREATED, NEW, GOOD, FAIR, POOR
             $table->string('picture')->nullable();
             $table->timestamps();
-            $table->softDeletes();
         });
     }
 

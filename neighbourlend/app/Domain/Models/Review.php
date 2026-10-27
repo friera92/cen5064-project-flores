@@ -4,9 +4,12 @@ namespace App\Domain\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Review extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'comment',
         'reviewer_id',
@@ -29,22 +32,26 @@ class Review extends Model
 
     public function reviewer()
     {
-        return $this->belongsTo(User::class, 'reviewer_id');
+        return $this->belongsTo(User::class, 'reviewer_id')
+            ->withTrashed();
     }
 
     public function reviewee()
     {
-        return $this->belongsTo(User::class, 'reviewee_id');
+        return $this->belongsTo(User::class, 'reviewee_id')
+            ->withTrashed();
     }
 
     public function reservation()
     {
-        return $this->belongsTo(Reservation::class, 'reservation_id');
+        return $this->belongsTo(Reservation::class, 'reservation_id')
+            ->withTrashed();
     }
 
     public function tool()
     {
-        return $this->belongsTo(Tool::class, 'tool_id');
+        return $this->belongsTo(Tool::class, 'tool_id')
+            ->withTrashed();
     }
 
     /**

@@ -53,6 +53,11 @@ class User extends Authenticatable
         return $this->hasMany(Reservation::class, 'borrower_id');
     }
 
+    public function tools(): HasMany
+    {
+        return $this->hasMany(Tool::class, 'owner_id');
+    }
+
     // Reviews written BY this user
     public function authoredReviews(): HasMany
     {
