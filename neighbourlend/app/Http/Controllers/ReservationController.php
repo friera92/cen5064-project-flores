@@ -7,7 +7,6 @@ use App\Services\ToolService;
 use App\Repositories\ReservationRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Domain\States\ReservationState;
 use App\Http\Requests\ReservationRequest;
 
 class ReservationController extends Controller
