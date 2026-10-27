@@ -4,10 +4,12 @@ namespace App\Domain\Models;
 
 use App\Domain\States\ReservationState;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domain\States\ToolReturnedCondition;
 
 class Reservation extends Model
 {
+    use SoftDeletes;
 
     protected $fillable = [
         'borrower_id',
@@ -32,12 +34,14 @@ class Reservation extends Model
 
     public function borrower()
     {
-        return $this->belongsTo(User::class, 'borrower_id');
+        return $this->belongsTo(User::class, 'borrower_id')
+            ->withTrashed();
     }
 
     public function tool()
     {
-        return $this->belongsTo(Tool::class, 'tool_id');
+        return $this->belongsTo(Tool::class, 'tool_id')
+            ->withTrashed();
     }
 
     public function reviews()
