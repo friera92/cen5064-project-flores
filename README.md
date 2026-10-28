@@ -32,114 +32,207 @@ Dual-Sided Trust & Return Review System: Post-loan condition confirmation, dispu
 
 ## How to run
 
-### Prerequisites
+The recommended local development environment uses **Docker Compose** to run the Nuxt frontend, Laravel API, and PostgreSQL together. A manual (non-Docker) setup is also available below. These instructions assume this repository layout:
 
-Install the following tools before starting:
+```text
+cen5064-project-flores/
+├── compose.yaml                  # Docker Compose services
+├── .env.docker.example           # Template for root .env
+├── .env                          # Local Docker variables; do not commit
+├── docker/php/Dockerfile
+├── neighbourlend/                # Laravel API
+│   ├── artisan
+│   ├── composer.json
+│   └── .env                       # Local Laravel configuration; do not commit
+└── ui/                           # Nuxt frontend
+    ├── package.json
+    └── nuxt.config.ts
+```
+
+### Option A — Docker Compose (recommended)
+
+#### Prerequisites
 
 - Git
-- PHP and Composer (use the PHP version required by `neighbourlend/composer.json`)
-- PostgreSQL and the PHP PostgreSQL extensions (`pdo_pgsql`, `pgsql`)
-- Node.js and npm (use the Node.js version supported by the Nuxt project)
+- Docker Desktop with Docker Compose (Windows users: WSL 2 backend and Linux containers)
 
-Verify the installed tools with `php -v`, `composer --version`, `php -m`, `node -v`, and `npm -v`.
+PHP, Composer, Node.js, and PostgreSQL do **not** need to be installed separately on the host when using this option.
 
-### 1. Clone the repository
+#### 1. Clone the repository
 
 ```bash
 git clone https://github.com/friera92/cen5064-project-flores.git
 cd cen5064-project-flores
 ```
 
-All paths below are relative to the repository root.
+Run the remaining commands from the **repository root**, unless otherwise specified.
 
-### 2. Set up PostgreSQL
+#### 2. Create local environment files
 
-Start PostgreSQL and create a local database named `neighbourlend`. Create or use a PostgreSQL account with permission to access that database. Keep database credentials in the backend `.env` file; do not commit them to Git.
-
-### 3. Configure and start the Laravel API
-
-Open a terminal in the repository root:
-
-```bash
-cd neighbourlend
-composer install
-```
-
-Copy the environment template:
+**Windows PowerShell:**
 
 ```powershell
-# PowerShell (Windows)
-Copy-Item .env.example .env
+Copy-Item .env.docker.example .env
+Copy-Item .\neighbourlend\.env.example .\neighbourlend\.env
 ```
 
-On macOS/Linux, use `cp .env.example .env` instead. Edit `neighbourlend/.env` to match your local PostgreSQL setup and the frontend URL:
+**macOS / Linux:**
+
+```bash
+cp .env.docker.example .env
+cp neighbourlend/.env.example neighbourlend/.env
+```
+
+If either local `.env` file already exists, **keep it instead of overwriting it**.
+
+Edit the **root `.env`** to configure the container database (use a unique local password):
 
 ```dotenv
+POSTGRES_DB=neighbourlend
+POSTGRES_USER=neighbourlend
+POSTGRES_PASSWORD=replace_with_a_local_password
+```
+
+The **`neighbourlend/.env`** is the Laravel application configuration. Ensure it contains the correct database host for communication **inside Docker**:
+
+```dotenv
+APP_ENV=local
+APP_DEBUG=true
 APP_URL=http://localhost:8000
 DB_CONNECTION=pgsql
-DB_HOST=127.0.0.1
+DB_HOST=db
 DB_PORT=5432
 DB_DATABASE=neighbourlend
-DB_USERNAME=your_postgres_user
-DB_PASSWORD=your_postgres_password
-SANCTUM_STATEFUL_DOMAINS=localhost:3000
+DB_USERNAME=neighbourlend
+DB_PASSWORD=replace_with_the_same_local_password
 ```
 
-If the project uses `config/cors.php`, allow the Nuxt origin `http://localhost:3000` in `allowed_origins`, include `api/*` in `paths`, and allow the required request methods and headers. For the current Bearer-token authentication flow, browser cookies are not required. If `config/cors.php` is absent, it can be published with `php artisan config:publish cors`.
+Use the same database name, username, and password as the root `.env`. In the provided Compose configuration, Docker also passes these DB variables to the backend container; those container variables take precedence over the Laravel `.env` values. The service name `db` resolves to the PostgreSQL container. **Do not use `127.0.0.1` for `DB_HOST` inside Laravel's Docker container.**
 
-Initialize the Laravel application and database:
-
-```bash
-php artisan key:generate
-php artisan migrate
-php artisan config:clear
-```
-
-If the repository provides seeders and demo data is needed, run `php artisan db:seed` (check available seeders first).
-
-Start the backend:
-
-```bash
-php artisan serve --host=localhost --port=8000
-```
-
-The API will be available at `http://localhost:8000`. Keep this terminal running.
-
-### 4. Configure and start the Nuxt frontend
-
-Open a **second terminal** at the repository root:
-
-```bash
-cd ui
-npm install
-```
-
-Create `ui/.env` with:
+The Nuxt API base URL must point to the Laravel origin **without duplicating `/api`**:
 
 ```dotenv
 NUXT_PUBLIC_API_BASE=http://localhost:8000
 ```
 
-Ensure `ui/nuxt.config.ts` exposes `runtimeConfig.public.apiBase` so the frontend can read `NUXT_PUBLIC_API_BASE`.
+Set this value in the `frontend.environment` section of `compose.yaml` (or in another Compose environment source wired to that service). Make sure `ui/nuxt.config.ts` exposes it via `runtimeConfig.public.apiBase` and that the existing frontend API client appends its endpoint paths such as `/api/login` **once**. Laravel automatically prefixes routes declared in `routes/api.php` with `/api`.
 
-Start the frontend:
+If using server-side requests from inside the Nuxt container, use Docker's internal backend address (`http://backend:8000`) for those requests; browser requests should use `http://localhost:8000`.
 
-```bash
-npm run dev
+#### 3. Build and start the containers
+
+```powershell
+docker compose up -d --build
+docker compose ps
 ```
 
-Open `http://localhost:3000` in your browser. Keep both the Laravel and Nuxt terminals running.
+The development stack provides:
 
-### 5. Verify the local setup
+| Service | From your computer | Inside the Docker network |
+| --- | --- | --- |
+| Nuxt frontend (`frontend`) | `http://localhost:3000` | `frontend:3000` |
+| Laravel API (`backend`) | `http://localhost:8000` | `backend:8000` |
+| PostgreSQL (`db`) | `localhost:5433` | `db:5432` |
 
-- Confirm that the Nuxt homepage loads at `http://localhost:3000`.
-- Confirm that Laravel responds at `http://localhost:8000/up`.
-- Use a valid account to sign in via `POST /api/login`. The API returns a Sanctum token, which authenticated requests send as `Authorization: Bearer <token>`.
-- Test the reservation quote endpoint after signing in. A `401 Unauthenticated` response usually means the Bearer token was not sent or is invalid.
+If a service does not start, inspect its logs:
 
-**Troubleshooting:** If Laravel reports `could not find driver` for `pgsql`, enable the `pdo_pgsql` PHP extension used by the CLI (`php --ini` and `php -m`). If the browser reports CORS errors, check Laravel's allowed origin and ensure the frontend and backend URLs consistently use `localhost`. Restart the relevant development server after changing its `.env` file.
+```powershell
+docker compose logs --tail=50 backend
+docker compose logs --tail=50 frontend
+docker compose logs --tail=50 db
+```
 
-**Security:** Never commit `.env` files, API tokens, database passwords, or other secrets. Share non-sensitive settings through `.env.example` files.
+#### 4. Initialize Laravel and PostgreSQL
+
+Generate the Laravel application key **once for a new local environment**:
+
+```powershell
+docker compose exec backend php artisan key:generate
+docker compose exec backend php artisan optimize:clear
+```
+
+Check the migration state and apply any outstanding migrations:
+
+```powershell
+docker compose exec backend php artisan migrate:status
+docker compose exec backend php artisan migrate
+```
+
+The Docker database uses its **own persistent volume**, separate from PostgreSQL installed on your computer. It will not automatically contain existing accounts, tools, or reservations. If the repository provides appropriate seeders, they can be run with `docker compose exec backend php artisan db:seed` after checking their effects.
+
+**Do not run `php artisan migrate:fresh` or `docker compose down -v` if you want to preserve your local Docker database.**
+
+#### 5. Verify the application
+
+- Open the Nuxt frontend at `http://localhost:3000`.
+- Check the Laravel health endpoint at `http://localhost:8000/up`.
+- Check available API routes with `docker compose exec backend php artisan route:list --path=api`.
+- Test registration or login (`POST /api/register`, `POST /api/login`) and confirm authenticated requests send a Sanctum Bearer token.
+- Try a reservation quote and request, then confirm the reservation appears in the UI and database.
+
+The URL for creating a reservation is `POST /api/reservation/new`; do not add a second `/api` prefix in the frontend client.
+
+#### Everyday Docker commands
+
+```powershell
+docker compose up -d                             # Start existing containers
+docker compose down                              # Stop containers; preserve volumes
+docker compose ps                                # Show service status
+docker compose logs -f backend                   # Follow Laravel logs
+docker compose logs -f frontend                  # Follow Nuxt logs
+docker compose exec backend php artisan test     # Run Laravel tests
+docker compose exec backend php artisan migrate:status
+```
+
+After changing variables under `environment:` in `compose.yaml`, recreate only the affected service; a full image rebuild is normally unnecessary:
+
+```powershell
+docker compose up -d --no-deps --force-recreate frontend
+# Or, for backend environment changes:
+docker compose up -d --no-deps --force-recreate backend
+```
+
+When changing only Laravel's `.env`, clear its configuration cache with `docker compose exec backend php artisan optimize:clear`.
+
+#### Troubleshooting Docker
+
+| Symptom | What to check |
+| --- | --- |
+| `Connection refused` to PostgreSQL at `127.0.0.1:5432` | Set Laravel's `DB_HOST=db` and `DB_PORT=5432`. Check `docker compose exec backend printenv DB_HOST` and `docker compose exec backend php artisan migrate:status`. |
+| Database authentication fails | Ensure root `POSTGRES_*` values match the backend's effective `DB_*` values. Changing database credentials after PostgreSQL's volume is initialized does not automatically change the existing database user password. |
+| Request URLs contain `/api/api/...` | Use `NUXT_PUBLIC_API_BASE=http://localhost:8000` if the frontend API client already requests `/api/...`. Recreate `frontend` after changing a Compose environment variable. |
+| CORS error | Allow `http://localhost:3000` in Laravel's CORS settings for `api/*`, and use consistent hostnames. |
+| `401 Unauthenticated` | Verify that the client sends `Authorization: Bearer <token>` for protected API endpoints. |
+| Container exits unexpectedly | Check `docker compose ps` and `docker compose logs --tail=100 <service>`. |
+
+### Option B — Run without Docker
+
+You can also start each application directly on your computer. This requires PHP and Composer (including the PostgreSQL PHP extensions), PostgreSQL, Node.js, and npm at compatible versions.
+
+1. Start a local PostgreSQL server and create the `neighbourlend` database.
+2. In `neighbourlend/`, install PHP dependencies and prepare `.env`:
+
+   ```bash
+   composer install
+   php artisan key:generate
+   php artisan migrate
+   php artisan serve --host=127.0.0.1 --port=8000
+   ```
+
+   For this **non-Docker** setup, set Laravel `DB_HOST=127.0.0.1` and `DB_PORT` to your locally installed PostgreSQL server's port (typically `5432`). Run `php artisan key:generate` only when initializing a new `.env`.
+
+3. In a second terminal, start Nuxt from `ui/`:
+
+   ```bash
+   npm ci
+   npm run dev
+   ```
+
+   Configure `NUXT_PUBLIC_API_BASE=http://localhost:8000` in the frontend's local environment as needed, and make sure the API client does not duplicate `/api`.
+
+For a first-time non-Docker setup, create the backend `.env` from `neighbourlend/.env.example` before running the Laravel commands.
+
+**Security:** Never commit `.env` files, database passwords, APP_KEY values, API tokens, or other secrets. Commit only example environment files with placeholder values. The Compose configuration is for **local development**, not production deployment.
 
 ## Architecture
 
@@ -148,17 +241,17 @@ Open `http://localhost:3000` in your browser. Keep both the Laravel and Nuxt ter
 | Tier         | Responsibilities in THIS system                                                                               | Example Classes/Modules                                                                                               |
 | ------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | Presentation | Captures user input, handles session state, triggers form validation, and renders views or serializes JSON.   | Authentication; UserDashboard**; ToolManagement; ToolCatalog; ToolRequest; ToolReturn; UserProfile**; UserReview\*\*; |
-| Service      | Coordinates application workflows, authorization checks, and transaction boundaries.                          | ToolService; UserService; AuthService; ReservationService; ReviewService                                              |
-| Domain       | Contains core business logic, invariant enforcement, and state transitions independent of the database or UI. | Tool; User; Reservation; Review                                                                                       |
+| Service      | Coordinates application workflows, authorization checks, and transaction boundaries.                          | ToolService; UserService; AuthService; ReservationService; LoanLifecycleService; ReviewService                                              |
+| Domain       | Contains core business logic, invariant enforcement, and state transitions independent of the database or UI. | Tool; User; Reservation; ReservationState; Review                                                                     |
 | Data         | Manages all direct queries, database migrations, model relationships, and transactional queries.              | ToolStore; UserStore; ReservationStore; ReviewStore                                                                   |
 
 \*\*(Lender && Borrower)
 
 ### Tech Stack
 
-- Frontend: Vue.js 3 (Composition API) for a lightweight, responsive, and component-driven user interface.
+- Frontend: Nuxt 4 with Vue.js 3 (Composition API) for a lightweight, responsive, and component-driven user interface.
 - Backend: PHP (Laravel) structured around a strict N-tier architecture (Presentation, Service, Domain, Data) to isolate business logic and routing.
-- Database & ORM: A single relational database (MySQL/PostgreSQL) managed via Eloquent ORM to handle transactional safety, data constraints, and optimistic/pessimistic locking.
+- Database & ORM: PostgreSQL managed via Eloquent ORM, using transactions, data constraints, and row-level locking for conflict prevention.
 
 ### C4 — Context & Container (Session 3 studio)
 
@@ -270,14 +363,14 @@ sequenceDiagram
     participant D as Database
 
     U->>UI: Request tool booking (dates)
-    UI->>S: POST /api/reservations
+    UI->>S: POST /api/reservation/new
 
     Note over S: Check Authorization Policy<br/>(User is not tool owner)
 
     S->>D: Check availability (lockForUpdate)
     D-->>S: Tool available
 
-    S->>D: Save reservation (Status: PENDING)
+    S->>D: Save reservation (Status: REQUESTED)
     D-->>S: Reservation confirmed
 
     S-->>UI: 201 Created (Reservation details)

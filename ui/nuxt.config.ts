@@ -1,17 +1,17 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
-  modules: ['@nuxt/ui'],
+  modules: ["@nuxt/ui"],
 
-  css: ['~/assets/css/main.css'],
+  css: ["~/assets/css/main.css"],
   colorMode: {
-    preference: 'light',
-    fallback: 'light'
+    preference: "light",
+    fallback: "light",
   },
   runtimeConfig: {
     public: {
-      apiBase: ''
-    }
-  }
-})
+      apiBase: "http://localhost:8000",
+    },
+  },
+});
