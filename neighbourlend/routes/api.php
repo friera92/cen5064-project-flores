@@ -10,6 +10,10 @@ use App\Http\Controllers\UserController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::get('/tools', [ToolController::class, 'index']);
+Route::get('/tools/{tool}', [ToolController::class, 'show'])->whereNumber('tool');
+Route::get('/categories', [CategoryController::class, 'index']);
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -22,10 +26,10 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('/tool')->group(function () {
-        Route::post('/add', []);
-        Route::get('/show', []);
-        Route::patch('/update', []);
-        Route::delete('/', []);
+        Route::get('/my/tools', [ToolController::class, 'mine']);
+        Route::post('/tools', [ToolController::class, 'store']);
+        Route::patch('/tools/{tool}', [ToolController::class, 'update'])->whereNumber('tool');
+        Route::delete('/tools/{tool}', [ToolController::class, 'destroy'])->whereNumber('tool');
     });
 
     Route::prefix('/review')->group(function () {

@@ -16,90 +16,88 @@ class ToolService
         private ToolRepositoryInterface $toolRepository
     ) {}
 
+    public function searchTools(array $filters): LengthAwarePaginator
+    {
+        return $this->toolRepository->search($filters);
+    }
+    public function getToolById(int $id): ?Tool
+    {
+        $tool = $this->toolRepository->findByIdWithLock($id);
+        if (!$tool) {
+            throw new DomainException("Tool not found");
+        }
+        return $tool;
+    }
+
+    public function getAllTools(): array
+    {
+        return $this->toolRepository->findAll();
+    }
+
     public function createTool(array $data): Tool
     {
         if (!isset($data['owner_id'])) {
-            throw new Exception('Owner ID is required to register a tool.');
+            throw new DomainException('Owner ID is required to register a tool.');
         }
 
-        // Set default availability if not provided
-        $data['availability_status'] = $data['availability_status'] ?? ToolStatus::AVAILABLE;
-
-        return $this->toolRepository->create($data);
+        // Ownership and availability are controlled by backend, not browser payload.
+        $data['availability_status'] = ToolStatus::AVAILABLE;
+        $tool = $this->toolRepository->create($data);
+        if (!$tool) {
+            throw new RuntimeException('Failed to create tool.');
+        }
+        return $tool;
     }
 
     public function updateTool(Tool $tool, array $data): Tool
     {
         return DB::transaction(function () use ($tool, $data) {
-            // 1. Domain Guard: Prevent modifying tools currently with a borrower
-            if ($tool->availability_status === ToolStatus::IN_USE) {
-                throw new Exception('Cannot update a tool that is currently in use by a borrower.');
+            // Same lock used by booking workflow, avoiding concurrent status changes.
+            $lockedTool = $this->toolRepository->findByIdWithLock($tool->id);
+            if (!$lockedTool) {
+                throw new DomainException('Tool not found.');
+            }
+            if ($lockedTool->availability_status === ToolStatus::IN_USE) {
+                throw new DomainException('Cannot update a tool while it is in use.');
             }
 
-            // 2. Prevent tampering with ownership
-            unset($data['owner_id'], $data['id']);
-
-            // 3. Update dirty attributes and persist
-            $tool->fill($data);
-
-            $saved = $this->toolRepository->save($tool);
-            if (!$saved) {
-                throw new Exception('Failed to save updated tool.');
+            unset($data['id'], $data['owner_id'], $data['availability_status']);
+            $lockedTool->fill($data);
+            if (!$this->toolRepository->save($lockedTool)) {
+                throw new RuntimeException('Failed to save updated tool.');
             }
-
-            return $tool;
+            return $lockedTool;
         });
     }
 
-
     public function deleteTool(Tool $tool): bool
     {
-        return DB::transaction(function () use ($tool): bool {
-
-            $tool = $this->toolRepository
-                ->findByIdWithLock($tool->id);
-
-            if (!$tool) {
-                throw new Exception('Tool not found.');
+        return DB::transaction(function () use ($tool) {
+            $lockedTool = $this->toolRepository->findByIdWithLock($tool->id);
+            if (!$lockedTool) {
+                throw new DomainException('Tool not found.');
             }
 
-            $blockingStatuses = [
+            // Never remove a tool that has unfinished reservations/disputes.
+            $blocked = $lockedTool->reservations()->whereIn('status', [
                 ReservationState::REQUESTED->value,
                 ReservationState::APPROVED->value,
                 ReservationState::ACTIVE->value,
                 ReservationState::RETURNED->value,
                 ReservationState::DISPUTED->value,
-            ];
+            ])->exists();
 
-            $hasBlockingReservations = $tool->reservations()
-                ->whereIn('status', $blockingStatuses)
-                ->exists();
-
-            if ($hasBlockingReservations) {
-                throw new Exception(
-                    'Cannot remove a tool with pending, active, returned, or disputed reservations.'
+            if ($blocked) {
+                throw new DomainException(
+                    'Cannot delete a tool with pending, active, returned or disputed reservations.'
                 );
             }
 
-            $deleted = $this->toolRepository->delete($tool->id);
-
-            if (!$deleted) {
-                throw new Exception('Failed to remove the tool.');
+            // With SoftDeletes enabled, repository->delete sets deleted_at.
+            if (!$this->toolRepository->delete($lockedTool->id)) {
+                throw new RuntimeException('Failed to delete tool.');
             }
-
             return true;
-        });
-    }
-
-
-    public function getToolById(int $id): ?Tool
-    {
-        return DB::transaction(function () use ($id) {
-            $tool = $this->toolRepository->findByIdWithLock($id);
-            if (!$tool) {
-                throw new Exception("Tool not found");
-            }
-            return $tool;
         });
     }
 
@@ -110,29 +108,31 @@ class ToolService
 
     public function updateToolAvailabilityStatus(Tool $tool, string $status): void
     {
-        if (!in_array($status, ToolStatus::cases())) {
-            throw new Exception("Invalid tool status: $status");
+        $value = ToolStatus::tryFrom($status);
+        if (!$value) {
+            throw new DomainException("Invalid tool status: {$status}");
         }
-
-        if ($this->toolRepository->findById($tool->id) === null) {
-            throw new Exception("Tool not found with ID: {$tool->id}");
+        if (!$this->toolRepository->findById($tool->id)) {
+            throw new DomainException('Tool not found.');
         }
-
-        $tool->availability_status = $status;
-        $this->toolRepository->save($tool);
+        $tool->availability_status = $value;
+        if (!$this->toolRepository->save($tool)) {
+            throw new RuntimeException('Failed to update tool availability.');
+        }
     }
 
     public function updateToolCondition(Tool $tool, string $condition): void
     {
-        if (!in_array($condition, ToolCondition::cases())) {
-            throw new Exception("Invalid tool condition: $condition");
+        $value = ToolCondition::tryFrom($condition);
+        if (!$value) {
+            throw new DomainException("Invalid tool condition: {$condition}");
         }
-
-        if ($this->toolRepository->findById($tool->id) === null) {
-            throw new Exception("Tool not found with ID: {$tool->id}");
+        if (!$this->toolRepository->findById($tool->id)) {
+            throw new DomainException('Tool not found.');
         }
-
-        $tool->condition = $condition;
-        $this->toolRepository->save($tool);
+        $tool->condition = $value;
+        if (!$this->toolRepository->save($tool)) {
+            throw new RuntimeException('Failed to update tool condition.');
+        }
     }
 }
