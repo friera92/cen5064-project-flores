@@ -31,6 +31,11 @@ class AppServiceProvider extends ServiceProvider
             ToolRepositoryInterface::class,
             ToolRepository::class
         );
+
+        $this->app->bind(
+            CategoryRepositoryInterface::class,
+            CategoryRepository::class
+        );
     }
 
     /**

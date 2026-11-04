@@ -31,12 +31,12 @@ class ToolRequest extends FormRequest
         return [
             'title' => [$prefix, 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'daily_rate' => [$prefix, 'numeric', 'min:0.01', 'max:999999.99'],
             'category_id' => [$prefix, 'integer', 'exists:categories,id'],
-            'daily_rate' => [$prefix, 'numeric', 'min:0'],
-            'availability_status' => ['sometimes', new Enum(ToolStatus::class)],
-            'condition' => [$prefix, new Enum(ToolCondition::class)],
-            'returned_condition' => ['nullable', new Enum(ToolReturnedCondition::class)],
-            'picture' => [$prefix, 'string', 'max:255']
+            'availability_status' => ['sometimes', Rule::Enum(ToolStatus::class)],
+            'condition' => [$prefix, Rule::Enum(ToolCondition::class)],
+            'returned_condition' => ['nullable', Rule::Enum(ToolReturnedCondition::class)],
+            'picture' => ['nullable', 'url', 'max:2048']
         ];
     }
 }

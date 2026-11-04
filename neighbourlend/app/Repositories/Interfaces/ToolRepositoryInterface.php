@@ -3,6 +3,7 @@
 namespace App\Repositories\Interfaces;
 
 use App\Domain\Models\Tool;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface ToolRepositoryInterface
 {
@@ -17,4 +18,5 @@ interface ToolRepositoryInterface
     public function findByCondition(string $condition): array;
     public function findByAvailabilityStatus(string $availabilityStatus): array;
     public function findByIdWithLock(int $id): ?Tool;
+    public function search(array $filters): LengthAwarePaginator;
 }

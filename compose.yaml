@@ -1,0 +1,68 @@
+# NeighbourLend local DEVELOPMENT environment (not production).
+# Expected checkout layout:
+# ./compose.yaml, ./neighbourlend/ (Laravel), ./ui/ (Nuxt)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-neighbourlend}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  backend:
+    build:
+      context: ./docker/php
+    working_dir: /var/www/html
+    volumes:
+      - ./neighbourlend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: ${POSTGRES_DB:-neighbourlend}
+      DB_USERNAME: ${POSTGRES_USER:-neighbourlend}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >-
+      sh -lc 'if [ ! -f vendor/autoload.php ]; then composer install --no-interaction --prefer-dist; fi;
+      php artisan serve --host=0.0.0.0 --port=8000'
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./ui:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      NODE_ENV: development
+      NUXT_PUBLIC_API_BASE: http://localhost:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    command: >-
+      sh -lc 'if [ ! -d node_modules/nuxt ]; then npm ci; fi;
+      npm run dev -- --host 0.0.0.0 --port 3000'
+
+volumes:
+  pg_data:
+  backend_vendor:
+  frontend_node_modules:
