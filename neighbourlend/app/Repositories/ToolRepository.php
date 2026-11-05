@@ -4,9 +4,19 @@ namespace App\Repositories;
 
 use App\Domain\Models\Tool;
 use App\Repositories\Interfaces\ToolRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ToolRepository implements ToolRepositoryInterface
 {
+    public function getAllTools()
+    {
+        return Tool::all();
+    }
+
+    public function getToolById($id)
+    {
+        return Tool::find($id);
+    }
 
     public function create(array $data): ?Tool
     {
@@ -21,10 +31,7 @@ class ToolRepository implements ToolRepositoryInterface
     public function delete(int $id): bool
     {
         $tool = Tool::find($id);
-        if ($tool) {
-            return $tool->delete();
-        }
-        return false;
+        return $tool ? (bool) $tool->delete() : false;
     }
 
     public function findById(int $id): ?Tool
@@ -65,5 +72,38 @@ class ToolRepository implements ToolRepositoryInterface
     public function findByIdWithLock(int $id): ?Tool
     {
         return Tool::where('id', $id)->lockForUpdate()->first();
+    }
+
+    public function search(array $filters): LengthAwarePaginator
+    {
+        // SoftDeletes on Tool automatically excludes logically deleted tools.
+        $query = Tool::query()->with('category:id,name');
+
+        if (isset($filters['owner_id'])) {
+            $query->where('owner_id', $filters['owner_id']);
+        }
+
+        if (!empty($filters['q'])) {
+            $term = '%' . mb_strtolower(trim($filters['q'])) . '%';
+            // Compatible with PostgreSQL; bound parameter protects from SQL injection.
+            $query->whereRaw('LOWER(title) LIKE ?', [$term]);
+        }
+
+        foreach (['category_id', 'condition', 'availability_status'] as $key) {
+            if (isset($filters[$key]) && $filters[$key] !== '') {
+                $query->where($key, $filters[$key]);
+            }
+        }
+
+        if (isset($filters['min_rate'])) {
+            $query->where('daily_rate', '>=', $filters['min_rate']);
+        }
+        if (isset($filters['max_rate'])) {
+            $query->where('daily_rate', '<=', $filters['max_rate']);
+        }
+
+        return $query->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate((int) ($filters['per_page'] ?? 12));
     }
 }

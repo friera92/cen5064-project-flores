@@ -30,4 +30,9 @@ class CategoryRepository implements CategoryRepositoryInterface
     {
         return Category::find($id);
     }
+
+    public function findAll(): Collection
+    {
+        return Category::query()->orderBy('name')->get(['id', 'name']);
+    }
 }
