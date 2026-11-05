@@ -33,4 +33,9 @@ class CategoryService
     {
         return $this->categoryRepository->delete($id);
     }
+
+    public function listCategories(): Collection
+    {
+        return $this->categoryRepository->findAll();
+    }
 }
