@@ -3,6 +3,7 @@
 namespace App\Repositories\Interfaces;
 
 use App\Domain\Models\Category;
+use Illuminate\Support\Collection;
 
 interface CategoryRepositoryInterface
 {

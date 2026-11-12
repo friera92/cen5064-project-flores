@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Domain\States\ToolCondition;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rule;
 use App\Domain\States\ToolStatus;
 use App\Domain\States\ToolReturnedCondition;
 

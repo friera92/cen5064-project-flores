@@ -8,7 +8,9 @@ use App\Domain\States\ToolCondition;
 use App\Repositories\Interfaces\ToolRepositoryInterface;
 use App\Domain\States\ReservationState;
 use Illuminate\Support\Facades\DB;
-use Exception;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use DomainException;
+use RuntimeException;
 
 class ToolService
 {
@@ -27,11 +29,6 @@ class ToolService
             throw new DomainException("Tool not found");
         }
         return $tool;
-    }
-
-    public function getAllTools(): array
-    {
-        return $this->toolRepository->findAll();
     }
 
     public function createTool(array $data): Tool

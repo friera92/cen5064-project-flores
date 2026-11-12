@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ToolController;
+use App\Http\Controllers\CategoryController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Domain\Models\Category;
 use App\Repositories\Interfaces\CategoryRepositoryInterface;
+use Illuminate\Support\Collection;
 
 class CategoryService
 {

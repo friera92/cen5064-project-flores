@@ -64,19 +64,18 @@ use App\Domain\Models\Tool;
 use DomainException;
 use App\Domain\States\ToolCondition;
 use App\Domain\States\ToolStatus;
-use App\Http\Requests\StoreToolRequest;
-use App\Http\Requests\UpdateToolRequest;
 use App\Services\ToolService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
+use App\Http\Requests\ToolRequest;
 
 class ToolController extends Controller
 {
     public function __construct(private ToolService $toolService) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(ToolRequest $request): JsonResponse
     {
         return response()->json($this->toolService->searchTools($this->filters($request)));
     }
@@ -86,7 +85,7 @@ class ToolController extends Controller
         return response()->json($tool->load('category'));
     }
 
-    public function mine(Request $request): JsonResponse
+    public function mine(ToolRequest $request): JsonResponse
     {
         $filters = $this->filters($request);
         // Do not trust owner_id supplied in request. Always derive it from token.
@@ -122,7 +121,7 @@ class ToolController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, Tool $tool): Response|JsonResponse
+    public function destroy(ToolRequest $request, Tool $tool): Response|JsonResponse
     {
         // Reuse 'update' ability for backward compatibility with existing ToolPolicy.
         // When ToolPolicy::delete exists, replace 'update' with 'delete'.
@@ -135,7 +134,7 @@ class ToolController extends Controller
         return response()->noContent();
     }
 
-    private function filters(Request $request): array
+    private function filters(ToolRequest $request): array
     {
         return $request->validate([
             'q' => ['sometimes', 'string', 'max:100'],
