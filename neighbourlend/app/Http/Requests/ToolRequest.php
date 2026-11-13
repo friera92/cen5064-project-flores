@@ -36,7 +36,12 @@ class ToolRequest extends FormRequest
             'availability_status' => ['sometimes', Rule::Enum(ToolStatus::class)],
             'condition' => [$prefix, Rule::Enum(ToolCondition::class)],
             'returned_condition' => ['nullable', Rule::Enum(ToolReturnedCondition::class)],
-            'picture' => ['nullable', 'url', 'max:2048']
+            'picture' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
         ];
     }
 }

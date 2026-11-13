@@ -9,7 +9,7 @@ definePageMeta({
 const selectedStatus = ref('ALL')
 
 const statusOptions = [
-   { label: 'All Reservations', value: 'ALL' },
+  { label: 'All Reservations', value: 'ALL' },
   { label: 'Requested', value: 'REQUESTED' },
   { label: 'Approved', value: 'APPROVED' },
   { label: 'Active', value: 'ACTIVE' },

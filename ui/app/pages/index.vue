@@ -1,414 +1,120 @@
-
 <script setup lang="ts">
-import { equipment, categories } from '~/data/equipment'
+import type { Category, PaginatedTools, ToolFilters } from '~/types/tool'
 
-const search = ref('')
-const selectedCategory = ref('All Equipment')
-const maxPrice = ref(50)
-const selectedCondition = ref('Any Condition')
-const sortBy = ref('recommended')
+const { listTools, listCategories } = useTools()
+const categories = ref<Category[]>([])
+const result = ref<PaginatedTools | null>(null)
+const busy = ref(false)
+const error = ref('')
+const page = ref(1)
 
-const startDate = ref('')
-const endDate = ref('')
-
-const showMobileFilters = ref(false)
-
-const categoryNames = [
-  'All Equipment',
-  ...categories.map(category => category.name)
-]
-
-const conditions = [
-  'Any Condition',
-  'Like New',
-  'Good'
-]
-
-const sortOptions = [
-  { label: 'Recommended', value: 'recommended' },
-  { label: 'Price: Low to High', value: 'price-asc' },
-  { label: 'Price: High to Low', value: 'price-desc' },
-  { label: 'Name: A to Z', value: 'name-asc' }
-]
-
-const filteredEquipment = computed(() => {
-  const query = search.value.trim().toLowerCase()
-
-  const results = equipment.filter((item) => {
-    const matchesSearch =
-      item.title.toLowerCase().includes(query)
-      || item.description.toLowerCase().includes(query)
-
-    const matchesCategory =
-      selectedCategory.value === 'All Equipment'
-      || item.category.name === selectedCategory.value
-
-    const matchesPrice = item.daily_rate <= maxPrice.value
-
-    const matchesCondition =
-      selectedCondition.value === 'Any Condition'
-      || item.condition === selectedCondition.value
-
-    return (
-      matchesSearch
-      && matchesCategory
-      && matchesPrice
-      && matchesCondition
-    )
-  })
-
-  if (sortBy.value === 'price-asc') {
-    return results.sort((a, b) => a.daily_rate - b.daily_rate)
-  }
-
-  if (sortBy.value === 'price-desc') {
-    return results.sort((a, b) => b.daily_rate - a.daily_rate)
-  }
-
-  if (sortBy.value === 'name-asc') {
-    return results.sort((a, b) => a.title.localeCompare(b.title))
-  }
-
-  return results
+const search = reactive({
+  q: '',
+  category_id: '',
+  availability_status: '',
+  min_rate: '',
+  max_rate: '',
+  condition: '',
 })
 
-const invalidDateRange = computed(() => {
-  return Boolean(
-    startDate.value
-    && endDate.value
-    && endDate.value < startDate.value
-  )
-})
-
-function clearFilters() {
-  search.value = ''
-  selectedCategory.value = 'All Equipment'
-  maxPrice.value = 50
-  selectedCondition.value = 'Any Condition'
-  sortBy.value = 'recommended'
-  startDate.value = ''
-  endDate.value = ''
+async function fetchTools() {
+  busy.value = true
+  error.value = ''
+  try {
+    const filters: ToolFilters = { page: page.value, per_page: 12 }
+    if (search.q.trim()) filters.q = search.q.trim()
+    if (search.category_id) filters.category_id = Number(search.category_id)
+    if (search.availability_status) filters.availability_status = search.availability_status as ToolFilters['availability_status']
+    if (search.condition) filters.condition = search.condition as ToolFilters['condition']
+    if (search.min_rate !== '') filters.min_rate = Number(search.min_rate)
+    if (search.max_rate !== '') filters.max_rate = Number(search.max_rate)
+    result.value = await listTools(filters)
+  } catch (e: any) {
+    error.value = e?.data?.message || 'Unable to load tools from the API.'
+  } finally {
+    busy.value = false
+  }
 }
 
-watch(startDate, (value) => {
-  if (value && endDate.value && endDate.value < value) {
-    endDate.value = ''
-  }
+function applyFilters() { page.value = 1; fetchTools() }
+function resetFilters() {
+  Object.assign(search, { q: '', category_id: '', availability_status: '', min_rate: '', max_rate: '', condition: '' })
+  applyFilters()
+}
+function changePage(next: number) { page.value = next; fetchTools() }
+
+onMounted(async () => {
+  const [categoriesResult] = await Promise.allSettled([listCategories()])
+  if (categoriesResult.status === 'fulfilled') categories.value = categoriesResult.value
+  await fetchTools()
 })
 </script>
 
 <template>
   <div class="min-h-screen bg-[#FAF9F6]">
     <AppHeader />
+    <UContainer class="py-10 md:py-14">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-[#172B25]">Explore Equipment</h1>
+          <p class="mt-2 text-[#66736D]">Browse tools listed by the community.</p>
+        </div>
+        <NuxtLink to="/my-equipment/create" class="rounded-xl bg-[#176B52] px-5 py-3 font-semibold text-white">List an Item</NuxtLink>
+      </div>
 
-    <main>
-      <!-- Hero -->
-      <section class="bg-[#E9F4ED] py-14 md:py-20">
-        <UContainer>
-          <div class="mx-auto max-w-3xl text-center">
-            <span
-              class="inline-flex rounded-full bg-white/70
-                     px-4 py-2 text-xs font-bold tracking-widest
-                     text-[#176B52]"
-            >
-              SHARE MORE. BUY LESS.
-            </span>
+      <form class="mt-8 grid gap-3 rounded-2xl border border-[#E5E9E4] bg-white p-5 sm:grid-cols-2 lg:grid-cols-7" @submit.prevent="applyFilters">
+        <input v-model="search.q" aria-label="Search tools" placeholder="Search tools" class="rounded-lg border p-3 lg:col-span-2" />
+        <select v-model="search.category_id" aria-label="Category" class="rounded-lg border p-3">
+          <option value="">All categories</option>
+          <option v-for="c in categories" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+        </select>
+        <select v-model="search.availability_status" aria-label="Availability" class="rounded-lg border p-3">
+          <option value="">All statuses</option>
+          <option value="AVAILABLE">Available</option>
+          <option value="IN_USE">In use</option>
+          <option value="MAINTENANCE">Maintenance</option>
+          <option value="RETIRED">Retired</option>
+        </select>
+        <select v-model="search.condition" aria-label="Tool condition" class="rounded-lg border p-3">
+          <option value="">All conditions</option>
+          <option value="NEW">New</option>
+          <option value="GOOD">Good</option>
+          <option value="FAIR">Fair</option>
+          <option value="POOR">Poor</option>
+          <option value="CREATED">Created</option>
+        </select>
+        <input v-model="search.min_rate" type="number" min="0" step="0.01" aria-label="Minimum daily rate" placeholder="Min $/day" class="rounded-lg border p-3" />
+        <input v-model="search.max_rate" type="number" min="0" step="0.01" aria-label="Maximum daily rate" placeholder="Max $/day" class="rounded-lg border p-3" />
+        <div class="flex gap-3 lg:col-span-7">
+          <button type="submit" class="rounded-xl bg-[#176B52] px-5 py-2 text-white">Apply filters</button>
+          <button type="button" class="rounded-xl border px-5 py-2" @click="resetFilters">Reset</button>
+        </div>
+      </form>
 
-            <h1
-              class="mt-6 text-4xl font-bold tracking-tight
-                     text-[#172B25] md:text-6xl"
-            >
-              Borrow. Build.
-              <span class="text-[#176B52]">Belong.</span>
-            </h1>
+      <p v-if="error" role="alert" class="mt-5 rounded-lg bg-red-50 p-4 text-red-700">{{ error }}</p>
+      <p v-else-if="busy" class="mt-8 text-[#66736D]">Loading tools from database...</p>
+      <p v-else-if="!result?.data.length" class="mt-8 text-[#66736D]">No tools match these filters.</p>
 
-            <p class="mx-auto mt-5 max-w-xl text-lg text-[#66736D]">
-              Find the tools and equipment you need,
-              shared by people in your community.
-            </p>
-
-            <div
-              class="mx-auto mt-9 max-w-2xl rounded-2xl
-                     bg-white p-3 shadow-lg"
-            >
-              <UInput
-                v-model="search"
-                icon="i-lucide-search"
-                placeholder="Search tools and equipment..."
-                size="xl"
-                class="w-full"
-                :ui="{ base: 'w-full bg-white text-[#172B25]' }"
-              />
+      <div v-if="!busy && result?.data.length" class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <NuxtLink v-for="tool in result.data" :key="tool.id" :to="`/equipment/${tool.id}`" class="overflow-hidden rounded-2xl border border-[#E5E9E4] bg-white transition hover:shadow-md">
+          <img v-if="tool.picture_url" :src="tool.picture_url" :alt="tool.title" class="h-48 w-full object-cover" />
+          <div v-else class="flex h-48 items-center justify-center bg-[#E9F4ED] text-[#176B52]">No image available</div>
+          <div class="p-5">
+            <p class="text-xs uppercase tracking-wide text-[#66736D]">{{ tool.category?.name || 'Equipment' }}</p>
+            <h2 class="mt-2 text-lg font-semibold text-[#172B25]">{{ tool.title }}</h2>
+            <div class="mt-4 flex items-center justify-between text-sm">
+              <span class="font-bold text-[#176B52]">${{ Number(tool.daily_rate).toFixed(2) }}/day</span>
+              <span class="rounded-full bg-[#E9F4ED] px-3 py-1 text-[#176B52]">{{ tool.availability_status }}</span>
             </div>
           </div>
-        </UContainer>
-      </section>
+        </NuxtLink>
+      </div>
 
-      <!-- Catalog -->
-      <section class="py-10 md:py-14">
-        <UContainer>
-          <div
-            class="mb-8 flex flex-col justify-between gap-4
-                   sm:flex-row sm:items-end"
-          >
-            <div>
-              <h2 class="text-3xl font-bold text-[#172B25]">
-                Explore Equipment
-              </h2>
-
-              <p class="mt-2 text-[#66736D]">
-                Discover what's available in your community.
-              </p>
-            </div>
-
-            <span class="text-sm text-[#66736D]">
-              {{ filteredEquipment.length }} items found
-            </span>
-          </div>
-
-          <div class="grid grid-cols-1 gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <!-- Filters -->
-            <aside>
-              <UButton
-                label="Filters"
-                icon="i-lucide-sliders-horizontal"
-                color="neutral"
-                variant="outline"
-                block
-                class="mb-4 lg:hidden"
-                @click="showMobileFilters = !showMobileFilters"
-              />
-
-              <div
-                :class="showMobileFilters ? 'block' : 'hidden lg:block'"
-                class="rounded-2xl border border-[#E5E9E4]
-                       bg-white p-5"
-              >
-                <div class="mb-6 flex items-center justify-between">
-                  <h3 class="font-semibold text-[#172B25]">
-                    Filters
-                  </h3>
-
-                  <button
-                    type="button"
-                    class="text-sm font-medium text-[#176B52]
-                           hover:underline"
-                    @click="clearFilters"
-                  >
-                    Clear all
-                  </button>
-                </div>
-
-                <!-- Category -->
-                <div class="border-b border-[#E5E9E4] pb-6">
-                  <h4 class="mb-4 text-sm font-semibold text-[#172B25]">
-                    Category
-                  </h4>
-
-                  <div class="space-y-3">
-                    <label
-                      v-for="category in categoryNames"
-                      :key="category"
-                      class="flex cursor-pointer items-center gap-3
-                             text-sm text-[#66736D]"
-                    >
-                      <input
-                        v-model="selectedCategory"
-                        type="radio"
-                        name="category"
-                        :value="category"
-                        class="accent-[#176B52]"
-                      >
-
-                      {{ category }}
-                    </label>
-                  </div>
-                </div>
-
-                <!-- Price -->
-                <div class="border-b border-[#E5E9E4] py-6">
-                  <div class="mb-4 flex items-center justify-between">
-                    <h4 class="text-sm font-semibold text-[#172B25]">
-                      Maximum daily rate
-                    </h4>
-
-                    <span class="text-sm font-semibold text-[#176B52]">
-                      ${{ maxPrice }}
-                    </span>
-                  </div>
-
-                  <input
-                    v-model.number="maxPrice"
-                    type="range"
-                    min="0"
-                    max="50"
-                    step="5"
-                    aria-label="Maximum daily rate"
-                    class="w-full accent-[#176B52]"
-                  >
-
-                  <div
-                    class="mt-1 flex justify-between text-xs
-                           text-[#66736D]"
-                  >
-                    <span>$0</span>
-                    <span>$50+</span>
-                  </div>
-                </div>
-
-                <!-- Condition -->
-                <div class="pt-6">
-                  <h4 class="mb-4 text-sm font-semibold text-[#172B25]">
-                    Condition
-                  </h4>
-
-                  <div class="space-y-3">
-                    <label
-                      v-for="condition in conditions"
-                      :key="condition"
-                      class="flex cursor-pointer items-center gap-3
-                             text-sm text-[#66736D]"
-                    >
-                      <input
-                        v-model="selectedCondition"
-                        type="radio"
-                        name="condition"
-                        :value="condition"
-                        class="accent-[#176B52]"
-                      >
-
-                      {{ condition }}
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </aside>
-
-            <!-- Results -->
-            <div class="min-w-0">
-              <!-- Date and sorting toolbar -->
-              <div
-                class="mb-6 rounded-2xl border border-[#E5E9E4]
-                       bg-white p-4"
-              >
-                <div
-                  class="flex flex-col gap-4
-                         xl:flex-row xl:items-end xl:justify-between"
-                >
-                  <div class="flex flex-wrap gap-3">
-                    <label class="flex flex-col gap-1">
-                      <span class="text-xs font-medium text-[#66736D]">
-                        Start date
-                      </span>
-
-                      <input
-                        v-model="startDate"
-                        type="date"
-                        :min="new Date().toISOString().slice(0, 10)"
-                        class="rounded-lg border border-[#E5E9E4]
-                               bg-white px-3 py-2 text-sm
-                               text-[#172B25]"
-                      >
-                    </label>
-
-                    <label class="flex flex-col gap-1">
-                      <span class="text-xs font-medium text-[#66736D]">
-                        End date
-                      </span>
-
-                      <input
-                        v-model="endDate"
-                        type="date"
-                        :min="startDate || new Date().toISOString().slice(0, 10)"
-                        class="rounded-lg border border-[#E5E9E4]
-                               bg-white px-3 py-2 text-sm
-                               text-[#172B25]"
-                      >
-                    </label>
-                  </div>
-
-                  <label class="flex flex-col gap-1">
-                    <span class="text-xs font-medium text-[#66736D]">
-                      Sort by
-                    </span>
-
-                    <select
-                      v-model="sortBy"
-                      class="rounded-lg border border-[#E5E9E4]
-                             bg-white px-3 py-2 text-sm
-                             text-[#172B25]"
-                    >
-                      <option
-                        v-for="option in sortOptions"
-                        :key="option.value"
-                        :value="option.value"
-                      >
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </label>
-                </div>
-
-                <p
-                  v-if="invalidDateRange"
-                  class="mt-3 text-sm text-red-600"
-                >
-                  End date must be on or after start date.
-                </p>
-
-                <p
-                  v-else-if="startDate || endDate"
-                  class="mt-3 text-xs text-[#66736D]"
-                >
-                  Date availability will be checked when
-                  reservations are connected to the backend.
-                </p>
-              </div>
-
-              <!-- Cards -->
-              <div
-                v-if="filteredEquipment.length"
-                class="grid grid-cols-1 gap-6
-                       sm:grid-cols-2 xl:grid-cols-3"
-              >
-                <EquipmentCard
-                  v-for="item in filteredEquipment"
-                  :key="item.id"
-                  :item="item"
-                />
-              </div>
-
-              <!-- Empty state -->
-              <div
-                v-else
-                class="rounded-2xl border border-[#E5E9E4]
-                       bg-white px-6 py-20 text-center"
-              >
-                <UIcon
-                  name="i-lucide-search-x"
-                  class="mx-auto size-12 text-[#66736D]"
-                />
-
-                <h3 class="mt-4 text-xl font-semibold text-[#172B25]">
-                  No equipment found
-                </h3>
-
-                <p class="mt-2 text-[#66736D]">
-                  Try adjusting your search or filters.
-                </p>
-
-                <UButton
-                  label="Clear Filters"
-                  color="neutral"
-                  variant="outline"
-                  class="mt-6"
-                  @click="clearFilters"
-                />
-              </div>
-            </div>
-          </div>
-        </UContainer>
-      </section>
-    </main>
+      <div v-if="result && result.last_page > 1" class="mt-8 flex items-center justify-center gap-4">
+        <button :disabled="busy || page <= 1" class="rounded-lg border px-4 py-2 disabled:opacity-50" @click="changePage(page - 1)">Previous</button>
+        <span>Page {{ page }} / {{ result.last_page }}</span>
+        <button :disabled="busy || page >= result.last_page" class="rounded-lg border px-4 py-2 disabled:opacity-50" @click="changePage(page + 1)">Next</button>
+      </div>
+    </UContainer>
   </div>
 </template>

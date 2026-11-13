@@ -82,7 +82,7 @@ class ToolController extends Controller
 
     public function show(Tool $tool): JsonResponse
     {
-        return response()->json($tool->load('category'));
+        return response()->json($tool->load(['category:id,name', 'owner:id,name,address']));
     }
 
     public function mine(ToolRequest $request): JsonResponse
@@ -97,6 +97,13 @@ class ToolController extends Controller
     {
         $data = $request->validated();
         $data['owner_id'] = $request->user()->id;
+
+        if ($request->hasFile('picture')) {
+            $data['picture'] = $request
+                ->file('picture')
+                ->store('tools', 'public');
+        }
+
         $tool = $this->toolService->createTool($data);
 
         return response()->json([
