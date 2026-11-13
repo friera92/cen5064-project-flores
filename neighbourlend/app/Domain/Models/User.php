@@ -35,6 +35,16 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    /** 
+     * The factory's corresponding model.
+     *
+     * @var UserFactory
+     */
+    protected static function newFactory(): UserFactory
+    {
+        return UserFactory::new();
+    }
+
     /**
      * Get the attributes that should be cast.
      *

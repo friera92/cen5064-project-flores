@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Domain\Models\Tool;
 use App\Repositories\Interfaces\ToolRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Builders\ToolSearchBuilder;
 
 class ToolRepository implements ToolRepositoryInterface
 {
@@ -76,31 +77,18 @@ class ToolRepository implements ToolRepositoryInterface
 
     public function search(array $filters): LengthAwarePaginator
     {
-        // SoftDeletes on Tool automatically excludes logically deleted tools.
-        $query = Tool::query()->with('category:id,name');
-
-        if (isset($filters['owner_id'])) {
-            $query->where('owner_id', $filters['owner_id']);
-        }
-
-        if (!empty($filters['q'])) {
-            $term = '%' . mb_strtolower(trim($filters['q'])) . '%';
-            // Compatible with PostgreSQL; bound parameter protects from SQL injection.
-            $query->whereRaw('LOWER(title) LIKE ?', [$term]);
-        }
-
-        foreach (['category_id', 'condition', 'availability_status'] as $key) {
-            if (isset($filters[$key]) && $filters[$key] !== '') {
-                $query->where($key, $filters[$key]);
-            }
-        }
-
-        if (isset($filters['min_rate'])) {
-            $query->where('daily_rate', '>=', $filters['min_rate']);
-        }
-        if (isset($filters['max_rate'])) {
-            $query->where('daily_rate', '<=', $filters['max_rate']);
-        }
+        // The Builder assembles optional filters; repository owns execution/pagination.
+        $query = (new ToolSearchBuilder())
+            ->forOwner(isset($filters['owner_id']) ? (int) $filters['owner_id'] : null)
+            ->matchingText($filters['q'] ?? null)
+            ->inCategory(isset($filters['category_id']) && $filters['category_id'] !== ''
+                ? (int) $filters['category_id']
+                : null)
+            ->withCondition($filters['condition'] ?? null)
+            ->withAvailability($filters['availability_status'] ?? null)
+            ->minimumRate($filters['min_rate'] ?? null)
+            ->maximumRate($filters['max_rate'] ?? null)
+            ->build();
 
         return $query->orderByDesc('created_at')
             ->orderByDesc('id')
