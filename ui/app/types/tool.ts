@@ -16,6 +16,7 @@ export interface Tool {
   availability_status: ToolStatus
   condition: ToolCondition
   picture: string | null
+  picture_url: string | null
   category?: Category | null
   created_at?: string
 }
@@ -26,7 +27,7 @@ export interface ToolInput {
   category_id: number
   daily_rate: number
   condition: ToolCondition
-  picture: string | null
+  picture: File | null
 }
 
 export interface PaginatedTools {

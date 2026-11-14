@@ -41,11 +41,6 @@ export function useTools() {
       formData.append('picture', data.picture)
     }
 
-    console.log('FormData contents:')
-    for (const [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`)
-    }
-
     return request<{ message: string; tool: Tool }>(
       '/api/tools/store',
       {
@@ -55,10 +50,23 @@ export function useTools() {
     )
   }
 
-  function updateTool(id: number, data: ToolInput) {
+  function updateTool(id: number, data: ToolPayload) {
+    const formData = new FormData()
+
+    formData.append('_method', 'PATCH')
+    formData.append('title', data.title)
+    formData.append('description', data.description)
+    formData.append('category_id', String(data.category_id))
+    formData.append('daily_rate', String(data.daily_rate))
+    formData.append('condition', data.condition)
+
+    if (data.picture instanceof File) {
+      formData.append('picture', data.picture)
+    }
+
     return request<{ message: string; tool: Tool }>(`/api/tools/${id}`, {
       method: 'PATCH',
-      body: data,
+      body: formData,
     })
   }
 

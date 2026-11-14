@@ -21,7 +21,7 @@ onMounted(async () => {
       <p v-if="loading" class="mt-8">Loading equipment...</p>
       <p v-else-if="error" role="alert" class="mt-8 text-red-700">{{ error }}</p>
       <article v-else-if="tool" class="mt-8 grid gap-8 rounded-2xl border bg-white p-6 md:grid-cols-2">
-        <img v-if="tool.picture" :src="tool.picture" :alt="tool.title" class="w-full rounded-xl object-cover" />
+        <img v-if="tool.picture" :src="tool.picture_url" :alt="tool.title" class="w-full rounded-xl object-cover" />
         <div v-else class="flex min-h-64 items-center justify-center rounded-xl bg-[#E9F4ED] text-[#176B52]">No image available</div>
         <div>
           <p class="text-sm text-[#66736D]">{{ tool.category?.name }}</p>

@@ -280,7 +280,7 @@ async function handleReservation() {
 		>
 		  <div class="flex gap-4">
 			<img
-			  :src="tool.picture"
+			  :src="tool.picture_url"
 			  :alt="tool.title"
 			  class="size-24 rounded-xl bg-[#E9F4ED]
 					 object-cover"
