@@ -7,6 +7,7 @@ use App\Domain\States\ToolCondition;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Tool extends Model
 {
@@ -22,6 +23,22 @@ class Tool extends Model
         'picture',
         'daily_rate'
     ];
+
+    protected $appends = ['picture_url'];
+
+    public function getPictureUrlAttribute(): ?string
+    {
+        if (!$this->picture) {
+            return null;
+        }
+
+        // Backward compatibility with existing external URLs.
+        if (filter_var($this->picture, FILTER_VALIDATE_URL)) {
+            return $this->picture;
+        }
+
+        return Storage::disk('public')->url($this->picture);
+    }
 
     public function casts(): array
     {

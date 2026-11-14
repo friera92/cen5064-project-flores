@@ -27,11 +27,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/inactivate', [UserController::class, 'delete']);
     });
 
-    Route::prefix('/tool')->group(function () {
-        Route::get('/my/tools', [ToolController::class, 'mine']);
-        Route::post('/tools', [ToolController::class, 'store']);
-        Route::patch('/tools/{tool}', [ToolController::class, 'update'])->whereNumber('tool');
-        Route::delete('/tools/{tool}', [ToolController::class, 'destroy'])->whereNumber('tool');
+    Route::prefix('/tools')->group(function () {
+        Route::get('/mine', [ToolController::class, 'mine']);
+        Route::post('/store', [ToolController::class, 'store']);
+        Route::patch('/{tool}', [ToolController::class, 'update'])->whereNumber('tool');
+        Route::delete('/{tool}', [ToolController::class, 'destroy'])->whereNumber('tool');
     });
 
     Route::prefix('/review')->group(function () {

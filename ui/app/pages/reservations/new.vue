@@ -1,13 +1,14 @@
 
 <script setup lang="ts">
-import { equipment } from '~/data/equipment'
 import type { ReservationQuote } from '~/types/reservation'
+import type { Tool } from '~/types/tool'
 
 definePageMeta({
   middleware: 'auth'
 })
 
 const route = useRoute()
+const { request } = useApi()
 
 const { getQuote, createReservation } = useReservations()
 
@@ -18,8 +19,26 @@ const quote = ref<ReservationQuote | null>(null)
 const quoteLoading = ref(false)
 const quoteError = ref('')
 
-const toolId = Number(queryString(route.query.tool))
-const tool = equipment.find(item => item.id === toolId)
+const toolId = Number(route.query.tool)
+
+if (!Number.isSafeInteger(toolId) || toolId <= 0) {
+  throw createError({
+    statusCode: 400,
+    statusMessage: 'Invalid equipment ID'
+  })
+}
+
+const {
+  data: tool,
+  pending: toolLoading,
+  error: toolError
+} = await useAsyncData(
+  `reservation-tool-${toolId}`,
+  () => request<Tool>(`/api/tools/${toolId}`),
+  {
+    server: false
+  }
+)
 
 const startDate = ref(queryString(route.query.start))
 const endDate = ref(queryString(route.query.end))
@@ -70,7 +89,7 @@ watch(
 
 	try {
 	  const response = await getQuote({
-		tool_id: tool.id,
+		tool_id: tool.value.id,
 		start_date: startDate.value,
 		end_date: endDate.value
 	  })
@@ -104,7 +123,7 @@ function localToday(): string {
 async function handleReservation() {
   reservationError.value = ''
 
-  if (!tool?.id) {
+  if (!tool?.value?.id) {
     reservationError.value = 'Tool information is unavailable.'
     return
   }
@@ -125,7 +144,7 @@ async function handleReservation() {
 
   try {
     const response = await createReservation({
-      tool_id: tool?.id,
+      tool_id: toolId,
       start_date: startDate.value,
       end_date: endDate.value
     })
@@ -155,9 +174,18 @@ async function handleReservation() {
   <div class="min-h-screen bg-[#FAF9F6]">
 	<AppHeader />
 
+	<UContainer v-if="toolLoading">
+	  <p>Loading equipment information...</p>
+	</UContainer>
+
+	<UContainer v-else-if="toolError || !tool">
+	  <p>Unable to load the selected equipment.</p>
+	</UContainer>
+
+
 	<UContainer class="max-w-5xl py-10 md:py-14">
 	  <NuxtLink
-		:to="`/equipment/${tool.id}`"
+		:to="`/equipment/${toolId}`"
 		class="inline-flex items-center gap-2 text-sm
 			   font-medium text-[#176B52]"
 	  >
@@ -252,7 +280,7 @@ async function handleReservation() {
 		>
 		  <div class="flex gap-4">
 			<img
-			  :src="tool.picture"
+			  :src="tool.picture_url"
 			  :alt="tool.title"
 			  class="size-24 rounded-xl bg-[#E9F4ED]
 					 object-cover"
@@ -277,7 +305,7 @@ async function handleReservation() {
 				  pt-5 text-sm">
 			<div class="flex justify-between text-[#66736D]">
 			  <span>Daily rate</span>
-			  <span>${{ tool.daily_rate.toFixed(2) }}</span>
+			  <span>${{ Number(tool.daily_rate).toFixed(2) }}</span>
 			</div>
 
 			<div class="flex justify-between text-[#66736D]">

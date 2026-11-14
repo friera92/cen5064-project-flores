@@ -14,4 +14,20 @@ export default defineNuxtConfig({
       apiBase: "http://localhost:8000",
     },
   },
+  // File watching for Docker on macOS
+  vite: {
+    server: {
+      watch: {
+        usePolling: true,
+        interval: 500,
+      },
+    },
+  },
+
+  watchers: {
+    chokidar: {
+      usePolling: true,
+      interval: 500,
+    },
+  },
 });

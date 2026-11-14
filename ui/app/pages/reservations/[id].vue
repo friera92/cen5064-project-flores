@@ -204,7 +204,7 @@ onMounted(() => {
                    md:flex-row md:items-start"
           >
             <img
-              :src="reservation.tool.picture"
+              :src="reservation.tool.picture_url"
               :alt="reservation.tool.title"
               class="h-56 w-full rounded-xl object-cover
                      md:h-52 md:w-64 md:shrink-0"
