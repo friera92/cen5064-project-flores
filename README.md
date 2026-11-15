@@ -476,6 +476,7 @@ Decisions live in [`docs/adr/`](docs/adr/). Start with ADR-001 in Session 4.
 | [001](docs/adr/adr-001.md) | [Adopt a Three-Tier Architecture]             | [accepted] |
 | [002](docs/adr/adr-002.md) | [Adopt Repository and Service Layer Patterns] | [accepted] |
 | [003](docs/adr/adr-003.md) | [Implement a Reservation State Machine]       | [accepted] |
+| [004](docs/adr/adr-004.md) | Apply the Single Responsibility Principle (One Class, One Job) | [accepted] |
 
 ### AI-Assisted Development
 
