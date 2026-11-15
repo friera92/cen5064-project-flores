@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\ReservationService;
 use App\Services\ToolService;
-use App\Repositories\ReservationRepository;
+use App\Repositories\Interfaces\ReservationRepositoryInterface;
+use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Requests\ReservationRequest;
@@ -14,7 +15,7 @@ class ReservationController extends Controller
     public function __construct(
         private ToolService $toolService,
         private ReservationService $reservationService,
-        private ReservationRepository $reservationRepository
+        private ReservationRepositoryInterface $reservationRepository
     ) {}
 
     public function store(ReservationRequest $request): JsonResponse
@@ -40,6 +41,15 @@ class ReservationController extends Controller
         ]);
     }
 
+    public function received(Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => $this->reservationRepository->findReceivedByOwnerId(
+                $request->user()->id
+            ),
+        ]);
+    }
+
     public function show(
         Request $request,
         int $reservation
@@ -47,14 +57,34 @@ class ReservationController extends Controller
         $item = $this->reservationService
             ->getReservarionById($reservation);
 
+        $isBorrower = $item->borrower_id === $request->user()->id;
+        $isLender = $item->tool?->owner_id === $request->user()->id;
+
         abort_unless(
-            $item->borrower_id === $request->user()->id,
+            $isBorrower || $isLender,
             403,
             'You are not authorized to view this reservation.'
         );
 
         return response()->json([
-            'data' => $item->load('tool')
+            'data' => $item->load(['tool', 'borrower:id,name'])
+        ]);
+    }
+
+    public function approve(Request $request, int $reservation): JsonResponse
+    {
+        try {
+            $item = $this->reservationService->approveReservation(
+                $reservation,
+                $request->user()->id
+            );
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+
+        return response()->json([
+            'message' => 'Reservation approved successfully.',
+            'data' => $item->load(['tool', 'borrower:id,name']),
         ]);
     }
 

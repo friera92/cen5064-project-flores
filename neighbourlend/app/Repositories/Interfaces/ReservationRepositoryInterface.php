@@ -11,6 +11,7 @@ interface ReservationRepositoryInterface
     public function create(array $data): Reservation;
     public function save(Reservation $reservation): bool;
     public function findByUserId(int $userId): array;
+    public function findReceivedByOwnerId(int $ownerId): array;
     public function findByToolId(int $toolId): array;
     public function findByToolIdAndStatus(int $toolId, string $status): array;
     public function hasOverlappingReservations(int $toolId, string $startDate, string $endDate): bool;
