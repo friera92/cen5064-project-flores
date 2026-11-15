@@ -1,0 +1,77 @@
+--- a/docs/TODO.md
++++ b/docs/TODO.md
+@@ -2,10 +2,11 @@
+ 
+ ## Final Delivery Plan (proposed)
+ 
+-- **Planning baseline:** November 14, 2026.
++- **Planning baseline:** November 14, 2026; issue register updated after organizing the final-delivery board.
+ - **Scope:** NeighbourLend final project; the exact final submission date must be checked against Canvas.
+-- **Tracking:** GitHub issues and project board; each change goes through a pull request into `main`.
+-- **Status convention:** Planned / In progress / Done / Blocked. Update the table and link issues or PRs as work advances.
++- **Tracking:** [NeighbourLend – Final Delivery (GitHub Project)](https://github.com/users/friera92/projects/2/views/1), linked issues #35–#42, and pull requests to `main`.
++- **Board workflow:** Backlog → In Progress → In Review → Done. Move an issue to Done only after acceptance criteria, review, and relevant CI evidence are complete.
++- **Board snapshot (November 14, 2026):** [#40](https://github.com/friera92/cen5064-project-flores/issues/40) is In Progress; #35–#39 and #41–#42 are in Backlog. This is an initial snapshot, not a live status indicator.
+ 
+ ### Completed baseline (before this plan)
+ 
+@@ -16,15 +17,30 @@
+ 
+ These are baseline accomplishments, **not** claims about work completed during the planned weeks below.
+ 
++### Final-delivery issue register
++
++All eight issues below are tracked on the public [GitHub Project board](https://github.com/users/friera92/projects/2/views/1). Their acceptance criteria live in the linked issue descriptions; this table summarizes scope, sequencing and initial status.
++
++| Issue | Workstream / deliverable | Priority | Dependencies | Initial board status |
++| --- | --- | --- | --- | --- |
++| [#35 — Lender reservations and approval API](https://github.com/friera92/cen5064-project-flores/issues/35) | Backend: received-reservations list, owner detail authorization, approval endpoint | High | Existing reservation domain state machine | Backlog |
++| [#36 — Handoff, return, inspection and closure APIs](https://github.com/friera92/cen5064-project-flores/issues/36) | Backend: expose and validate `LoanLifecycleService` operations | High | #35 for lender-facing flow; existing lifecycle service | Backlog |
++| [#37 — Lender reservation management UI](https://github.com/friera92/cen5064-project-flores/issues/37) | Frontend: incoming requests, owner actions and state feedback | High | #35 | Backlog |
++| [#38 — Borrower return and lender inspection/closure UI](https://github.com/friera92/cen5064-project-flores/issues/38) | Frontend: complete reservation state workflow through the API | High | #35, #36; coordinate with #37 | Backlog |
++| [#39 — Reservation HTTP and authorization tests](https://github.com/friera92/cen5064-project-flores/issues/39) | Tests: permissions, invalid transitions, state updates, conflict responses | High | Implement alongside #35 and #36 | Backlog |
++| [#40 — Final UML, weekly plan and setup documentation](https://github.com/friera92/cen5064-project-flores/issues/40) | Docs: behavioral UML, explicit seeding/CORS/storage setup, accurate plan | High | Current code and accepted issue scope | In Progress |
++| [#41 — Docker Compose integration workflow](https://github.com/friera92/cen5064-project-flores/issues/41) | CI: disposable full-stack build, health checks and smoke tests | Medium | Stable Compose setup; #40 documentation review | Backlog |
++| [#42 — Final workflow and release verification](https://github.com/friera92/cen5064-project-flores/issues/42) | Validation: clean install, borrower-to-lender demo, CI and submission evidence | High | #35–#40; #41 if completed | Backlog |
++
+ ### Weekly milestones, dependencies, and deliverables
+ 
+-| Week | Priority | Planned work | Deliverable / evidence | Dependency | Status |
+-| --- | --- | --- | --- | --- | --- |
+-| **Nov 16–22, 2026** | High | Complete design-document review: UML operations and domain/service dependencies; align README and `SETUP-LOCAL.md` with actual seeders, CORS, API base URL, and image storage setup; link issues to a GitHub Project board. | Documentation PR with diagrams, reproducible setup commands, and linked issues. | Current `main` and working local Docker environment. | Planned |
+-| **Nov 23–29, 2026** | Medium | Implement the separate Docker integration workflow described below; validate PostgreSQL health, API `/up`, Nuxt availability, and Laravel tests. If time permits, improve the overlapping-reservation API response to HTTP 409 and add a regression test. | Docker CI PR, passing workflow run, and optional API regression-test PR. | Documentation review and isolated test database; access to GitHub Actions. | Planned |
+-| **Nov 30–Dec 6, 2026** | High | Run a clean-clone installation walkthrough; verify seeding, login, catalog, reservation request/cancellation, tool images, and existing automated tests; verify README, UML, ADRs, and PR descriptions remain current. Prepare final submission evidence. | Reproducible demo checklist, green backend/frontend CI checks, final documentation PR or release candidate. | Earlier milestones merged; final submission date confirmed. | Planned |
++| Target week | Planned issues and work | Deliverable / verification evidence | Dependencies / risk focus | Target status |
++| --- | --- | --- | --- | --- |
++| **Nov 16–22, 2026** | Finish [#40](https://github.com/friera92/cen5064-project-flores/issues/40): UML, reproducible README/`SETUP-LOCAL.md`, and weekly plan. Start [#35](https://github.com/friera92/cen5064-project-flores/issues/35): received-reservation and approval API. Begin API tests under [#39](https://github.com/friera92/cen5064-project-flores/issues/39) as routes are added. | Documentation PR and initial backend PR(s), with targeted authorization/state tests and CI results. | Existing domain rules and seed data; R4, R5. | #40: In Progress → In Review → Done after merge; #35/#39: start |
++| **Nov 23–29, 2026** | Complete [#35](https://github.com/friera92/cen5064-project-flores/issues/35). Implement [#36](https://github.com/friera92/cen5064-project-flores/issues/36): lender handoff, borrower return, lender inspection/closure HTTP endpoints. Implement [#37](https://github.com/friera92/cen5064-project-flores/issues/37): lender dashboard using real API data. Expand [#39](https://github.com/friera92/cen5064-project-flores/issues/39). | Reviewed backend/frontend PRs and automated endpoint tests; demonstrable REQUESTED → APPROVED → ACTIVE flow with role authorization. | #37 depends on #35; #36 depends on state/lifecycle services; R2, R4, R6. | #35/#36/#37/#39: progress tracked by PR |
++| **Nov 30–Dec 6, 2026** | Finish [#38](https://github.com/friera92/cen5064-project-flores/issues/38) and [#39](https://github.com/friera92/cen5064-project-flores/issues/39): return, inspection, closure and dispute display, plus HTTP tests. Complete [#42](https://github.com/friera92/cen5064-project-flores/issues/42): clean install and full borrower–lender demo. Address [#41](https://github.com/friera92/cen5064-project-flores/issues/41) if capacity and course deadline permit. | Full REQUESTED → APPROVED → ACTIVE → RETURNED → CLOSED UI/API demonstration, negative-path tests, setup checklist, green CI, and release evidence. | #38 requires #35/#36; #42 requires the functional and test issues; R1–R6. | Core features and #42: Done when verified; #41: Done or documented follow-up |
+ 
+-**Schedule note:** These are target weeks rather than historical activity logs. Move or shorten them when the instructor confirms the actual deadline. Avoid labeling an item “Done” until its related PR and verification evidence exist.
++**Scheduling rules:** These are *proposed future target weeks*, not historical commit claims. Confirm the actual Canvas final deadline before treating them as commitments. Update issue/board statuses from actual PR evidence; this table is not automatically synchronized with GitHub. If time is tight, prioritize #35–#40 and #42. Defer medium-priority #41 explicitly rather than silently dropping a core borrower/lender flow. Administrative dispute resolution and an optional HTTP 409 refinement remain separate future enhancements unless required for completion.
+ 
+ ### Risk register
+ 
+@@ -41,12 +57,16 @@
+ 
+ ### Final acceptance checklist
+ 
+-- [ ] Design UML shows domain behavior and service operations without removing the original model attributes or relationships.
+-- [ ] README and `SETUP-LOCAL.md` document one reproducible Docker setup, demo data seeding, CORS behavior, and correct Nuxt API base URL.
+-- [ ] Milestone tasks are linked to GitHub issues / a Project board; status and PR evidence are up to date.
+-- [ ] Laravel tests pass on isolated PostgreSQL, and Laravel and Nuxt CI checks are green on the final PR.
+-- [ ] Clean-clone walkthrough confirms catalog retrieval, tool images, and reservation creation/cancellation.
+-- [ ] AI-assisted PRs document the tool used, issues found and verified, fixes, and kept-as-generated decisions.
++- [ ] [#40](https://github.com/friera92/cen5064-project-flores/issues/40): design UML preserves original model properties/relations and shows actual domain/service operations.
++- [ ] [#40](https://github.com/friera92/cen5064-project-flores/issues/40): README and `SETUP-LOCAL.md` document a reproducible Docker setup, demo data seeding, CORS, storage links, and correct Nuxt API origin.
++- [ ] [#35](https://github.com/friera92/cen5064-project-flores/issues/35): authenticated lender can list/view requests for owned tools and approve REQUESTED reservations.
++- [ ] [#36](https://github.com/friera92/cen5064-project-flores/issues/36): authenticated, role-authorized HTTP actions implement handoff, return, inspection and closure without duplicating domain rules.
++- [ ] [#37](https://github.com/friera92/cen5064-project-flores/issues/37) and [#38](https://github.com/friera92/cen5064-project-flores/issues/38): lender/borrower UI uses real API data and can complete the normal lifecycle.
++- [ ] [#39](https://github.com/friera92/cen5064-project-flores/issues/39): HTTP integration and authorization tests pass on isolated PostgreSQL; Laravel and Nuxt CI checks are green.
++- [ ] [#42](https://github.com/friera92/cen5064-project-flores/issues/42): clean-clone walkthrough verifies seeding, catalog, image display and both user roles through CLOSED; known dispute limitations are explicit.
++- [ ] [#41](https://github.com/friera92/cen5064-project-flores/issues/41): optional separate Docker CI smoke workflow passes **or** is explicitly carried forward as medium-priority follow-up.
++- [ ] Project board and this plan show actual issue/PR states and weekly evidence; do not change previously reviewed PR descriptions retrospectively.
++- [ ] New AI-assisted PRs include a specific critique describing tools used, what was checked, what was changed, and what was retained.
+ 
+ ---
+ 

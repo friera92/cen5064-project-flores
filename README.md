@@ -32,7 +32,7 @@ Dual-Sided Trust & Return Review System: Post-loan condition confirmation, dispu
 
 ## How to run
 
-The recommended local development environment uses **Docker Compose** to run the Nuxt frontend, Laravel API, and PostgreSQL together. A manual (non-Docker) setup is also available below. These instructions assume this repository layout:
+The recommended local development environment uses **Docker Compose** to run the Nuxt frontend, Laravel API, and PostgreSQL together. A manual (non-Docker) setup is also available below. These instructions use the repository layout checked into Git:
 
 ```text
 cen5064-project-flores/
@@ -115,7 +115,7 @@ The Nuxt API base URL must point to the Laravel origin **without duplicating `/a
 NUXT_PUBLIC_API_BASE=http://localhost:8000
 ```
 
-Set this value in the `frontend.environment` section of `compose.yaml` (or in another Compose environment source wired to that service). Make sure `ui/nuxt.config.ts` exposes it via `runtimeConfig.public.apiBase` and that the existing frontend API client appends its endpoint paths such as `/api/login` **once**. Laravel automatically prefixes routes declared in `routes/api.php` with `/api`.
+`compose.yaml` already sets this value in `frontend.environment`. The checked-in `ui/nuxt.config.ts` exposes `runtimeConfig.public.apiBase`; `ui/app/composables/useApi.ts` appends endpoint paths such as `/api/login`. Laravel automatically prefixes routes defined in `routes/api.php` with `/api`, so **do not add `/api` to `NUXT_PUBLIC_API_BASE`**.
 
 If using server-side requests from inside the Nuxt container, use Docker's internal backend address (`http://backend:8000`) for those requests; browser requests should use `http://localhost:8000`.
 
@@ -158,19 +158,45 @@ docker compose exec backend php artisan migrate:status
 docker compose exec backend php artisan migrate
 ```
 
-The Docker database uses its **own persistent volume**, separate from PostgreSQL installed on your computer. It will not automatically contain existing accounts, tools, or reservations. If the repository provides appropriate seeders, they can be run with `docker compose exec backend php artisan db:seed` after checking their effects.
+The Docker database uses its **own persistent volume**, separate from PostgreSQL installed on your computer. On a **new, isolated demo database**, loading the included seed data is a required setup step so the catalog and reservation demonstration have real records:
 
-**Do not run `php artisan migrate:fresh` or `docker compose down -v` if you want to preserve your local Docker database.**
+```powershell
+docker compose exec backend php artisan db:seed
+docker compose exec backend php artisan storage:link
+```
+
+`DatabaseSeeder` executes `UserSeeder`, `CategorySeeder`, `ToolSeeder`, `ReservationSeeder`, and `ReviewSeeder` in that order. These provide demonstration users, categories, tools, reservations, and reviews. The seed users have shared demo-only credentials defined in `UserSeeder.php`: **never use these accounts or credentials in a public/production environment**. The storage link exposes locally uploaded tool photos through Laravel's `/storage/...` URL; the seeded tools currently use external placeholder image URLs.
+
+**Seed only a fresh/disposable demo database.** Some seeders update existing records and the reservation seeder uses dates relative to the day it runs; repeated seeding can alter demo data. Do not run `db:seed`, `migrate:fresh`, or `docker compose down -v` against a database whose data you need to preserve.
+
+**CORS is already configured in `neighbourlend/config/cors.php`:** requests to `api/*` are allowed from `http://localhost:3000`. Keep that browser origin (including the same hostname) for the documented Docker setup. If the frontend is served from a different origin, explicitly update `allowed_origins` in that file and clear Laravel's configuration cache. This is an existing project configuration, not an optional setup file.
 
 #### 5. Verify the application
 
 - Open the Nuxt frontend at `http://localhost:3000`.
 - Check the Laravel health endpoint at `http://localhost:8000/up`.
 - Check available API routes with `docker compose exec backend php artisan route:list --path=api`.
-- Test registration or login (`POST /api/register`, `POST /api/login`) and confirm authenticated requests send a Sanctum Bearer token.
-- Try a reservation quote and request, then confirm the reservation appears in the UI and database.
+- Open `http://localhost:8000/api/tools` and `http://localhost:8000/api/categories`: after seeding, both should return records from PostgreSQL (the tools endpoint is paginated).
+- Sign in using a **demo account only in a private/local environment**, or register a new account (`POST /api/register`, `POST /api/login`). Authenticated API requests use a Sanctum Bearer token.
+- In the UI, verify that catalog items load from the API, then request a quote and create a reservation for available future dates. Confirm the reservation appears in the list.
 
-The URL for creating a reservation is `POST /api/reservation/new`; do not add a second `/api` prefix in the frontend client.
+The quote URL is `POST /api/reservation/quote` and the request URL is `POST /api/reservation/new`; do not add a second `/api` prefix in the frontend client.
+
+#### 6. Run automated tests on an isolated PostgreSQL database
+
+The integration tests use `RefreshDatabase` and require the **separate** PostgreSQL database `neighbourlend_test`. Create it **once** inside the Docker PostgreSQL service (skip this command if it already exists):
+
+```powershell
+docker compose exec db sh -c 'createdb -U "$POSTGRES_USER" neighbourlend_test'
+```
+
+Then run the full Laravel suite with explicit test database settings:
+
+```powershell
+docker compose exec -T -e APP_ENV=testing -e DB_CONNECTION=pgsql -e DB_DATABASE=neighbourlend_test backend php artisan test
+```
+
+**Safety:** Tests may reset database tables. Never substitute the development database `neighbourlend` for `neighbourlend_test`. GitHub Actions creates its own disposable `neighbourlend_test` database and runs `php artisan test` on pull requests to `main`.
 
 #### Everyday Docker commands
 
@@ -180,7 +206,7 @@ docker compose down                              # Stop containers; preserve vol
 docker compose ps                                # Show service status
 docker compose logs -f backend                   # Follow Laravel logs
 docker compose logs -f frontend                  # Follow Nuxt logs
-docker compose exec backend php artisan test     # Run Laravel tests
+docker compose exec -T -e APP_ENV=testing -e DB_CONNECTION=pgsql -e DB_DATABASE=neighbourlend_test backend php artisan test  # Isolated test DB; see step 6
 docker compose exec backend php artisan migrate:status
 ```
 
@@ -201,7 +227,7 @@ When changing only Laravel's `.env`, clear its configuration cache with `docker 
 | `Connection refused` to PostgreSQL at `127.0.0.1:5432` | Set Laravel's `DB_HOST=db` and `DB_PORT=5432`. Check `docker compose exec backend printenv DB_HOST` and `docker compose exec backend php artisan migrate:status`. |
 | Database authentication fails | Ensure root `POSTGRES_*` values match the backend's effective `DB_*` values. Changing database credentials after PostgreSQL's volume is initialized does not automatically change the existing database user password. |
 | Request URLs contain `/api/api/...` | Use `NUXT_PUBLIC_API_BASE=http://localhost:8000` if the frontend API client already requests `/api/...`. Recreate `frontend` after changing a Compose environment variable. |
-| CORS error | Allow `http://localhost:3000` in Laravel's CORS settings for `api/*`, and use consistent hostnames. |
+| CORS error | `neighbourlend/config/cors.php` already allows `http://localhost:3000` for `api/*`. Check the exact browser origin; after changing `allowed_origins`, clear the Laravel config cache. |
 | `401 Unauthenticated` | Verify that the client sends `Authorization: Bearer <token>` for protected API endpoints. |
 | Container exits unexpectedly | Check `docker compose ps` and `docker compose logs --tail=100 <service>`. |
 
@@ -216,6 +242,8 @@ You can also start each application directly on your computer. This requires PHP
    composer install
    php artisan key:generate
    php artisan migrate
+   php artisan db:seed             # Fresh local demo database only
+   php artisan storage:link
    php artisan serve --host=127.0.0.1 --port=8000
    ```
 
@@ -230,7 +258,7 @@ You can also start each application directly on your computer. This requires PHP
 
    Configure `NUXT_PUBLIC_API_BASE=http://localhost:8000` in the frontend's local environment as needed, and make sure the API client does not duplicate `/api`.
 
-For a first-time non-Docker setup, create the backend `.env` from `neighbourlend/.env.example` before running the Laravel commands.
+For a first-time non-Docker setup, create the backend `.env` from `neighbourlend/.env.example` before running the Laravel commands. With a non-Docker setup, also use `config/cors.php` to allow the actual local Nuxt origin; the checked-in default is `http://localhost:3000`. Only seed a clean local demo database.
 
 **Security:** Never commit `.env` files, database passwords, APP_KEY values, API tokens, or other secrets. Commit only example environment files with placeholder values. The Compose configuration is for **local development**, not production deployment.
 
@@ -299,6 +327,8 @@ flowchart TB
     API -->|"SQL / PDO\n(Transactions & Row Locks)"| DB
 ```
 
+The class diagram below preserves the original attributes and relationships and adds operations implemented in the codebase. Domain classes enforce reservation state transitions; services coordinate workflows.
+
 ```mermaid
 classDiagram
     class User {
@@ -310,12 +340,18 @@ classDiagram
         -address: String
         -picture: String
         -is_admin: Boolean
+        +tools() HasMany
+        +reservations() HasMany
+        +authoredReviews() HasMany
+        +receivedReviews() HasMany
+        +isAdmin() bool
     }
 
     class Category {
         -id: Long
         -name: String
         -description: String
+        +tools() HasMany
     }
 
     class Tool {
@@ -326,6 +362,11 @@ classDiagram
         -availability_status: String
         -condition: String
         -picture: String
+        +owner() BelongsTo
+        +category() BelongsTo
+        +reservations() HasMany
+        +reviews() HasMany
+        +getPictureUrlAttribute() String
     }
 
     class Reservation {
@@ -335,6 +376,10 @@ classDiagram
         -total_cost: BigDecimal
         -status: String
         -returned_condition: String
+        +transitionTo(newState) void
+        +borrower() BelongsTo
+        +tool() BelongsTo
+        +reviews() HasMany
     }
 
     class Review {
@@ -343,6 +388,46 @@ classDiagram
         -comment: String
         -visible: Boolean
         -end_date: Date
+        +reviewer() BelongsTo
+        +reviewee() BelongsTo
+        +reservation() BelongsTo
+        +tool() BelongsTo
+        +isActive() bool
+        +scopeActive(query) Builder
+    }
+
+    class ReservationState {
+        <<enumeration>>
+        REQUESTED
+        APPROVED
+        ACTIVE
+        RETURNED
+        CLOSED
+        CANCELED
+        DISPUTED
+        +canTransitionTo(newState) bool
+        +canBeInspected() bool
+    }
+
+    class ReservationService {
+        +requestTool(data) Reservation
+        +approveReservation(reservationId, userId) Reservation
+        +cancelReservation(reservationId, userId) Reservation
+        +calculateCost(dailyRate, startDate, endDate) array
+    }
+
+    class LoanLifecycleService {
+        +handOffTool(reservationId, userId) Reservation
+        +returnTool(reservationId, userId) Reservation
+        +inspectTool(reservationId, returnedCondition, userId) Reservation
+        +closeReservation(reservationId, userId) Reservation
+    }
+
+    class ToolService {
+        +searchTools(filters) LengthAwarePaginator
+        +createTool(data) Tool
+        +updateTool(tool, data) Tool
+        +deleteTool(tool) bool
     }
 
     User "1" --> "0..*" Tool : owns
@@ -353,6 +438,11 @@ classDiagram
 
     Tool "1" --> "0..*" Reservation : booked in
     Reservation "1" --> "0..2" Review : produces
+
+    Reservation --> ReservationState : status
+    ReservationService ..> Reservation : requests and cancellations
+    LoanLifecycleService ..> Reservation : handoff to closure
+    ToolService ..> Tool : manages
 ```
 
 ```mermaid

@@ -163,7 +163,7 @@ onMounted(() => {
                    sm:flex-row sm:items-start"
           >
             <img
-              :src="reservation.tool.picture"
+              :src="reservation.tool.picture_url"
               :alt="reservation.tool.title"
               class="rounded-xl object-cover
                      sm:w-48 sm:h-40 sm:shrink-0"
