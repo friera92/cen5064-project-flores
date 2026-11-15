@@ -42,8 +42,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('/reservation')->group(function () {
         Route::post('/new', [ReservationController::class, 'store']);
         Route::get('/all', [ReservationController::class, 'index']);
-        Route::get('/{reservation}', [ReservationController::class, 'show']);
-        Route::patch('/{reservation}/cancel', [ReservationController::class, 'cancel']);
+        // Static paths must be registered before dynamic reservation IDs.
+        Route::get('/received', [ReservationController::class, 'received']);
+        Route::get('/{reservation}', [ReservationController::class, 'show'])->whereNumber('reservation');
+        Route::patch('/{reservation}/approve', [ReservationController::class, 'approve'])->whereNumber('reservation');
+        Route::patch('/{reservation}/cancel', [ReservationController::class, 'cancel'])->whereNumber('reservation');
         Route::post('/quote', [ReservationController::class, 'quote']);
     });
 });

@@ -4,6 +4,10 @@ namespace App\Services;
 
 use App\Domain\States\ToolStatus;
 use App\Domain\States\ReservationState;
+use App\Domain\Models\Reservation;
+use App\Domain\Models\Tool;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Repositories\Interfaces\ReservationRepositoryInterface;
 use App\Repositories\Interfaces\ToolRepositoryInterface;
 use Illuminate\Support\Facades\DB;
@@ -69,17 +73,21 @@ class ReservationService
         return DB::transaction(function () use ($reservationId, $userId) {
             $reservation = $this->reservationRepository->findById($reservationId);
             if (!$reservation) {
-                throw new Exception('Reservation not found.');
+                throw (new ModelNotFoundException())->setModel(Reservation::class, [$reservationId]);
             }
 
             $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
             if (!$tool) {
-                throw new Exception('Tool not found.');
+                throw (new ModelNotFoundException())->setModel(Tool::class, [$reservation->tool_id]);
             }
 
             if ($tool->owner_id !== $userId) {
-                throw new Exception('You are not authorized to approve this reservation.');
+                throw new AuthorizationException('Only the tool owner can approve this reservation.');
             }
+
+            // Reload after obtaining the tool lock to prevent approval from
+            // using a stale reservation state in concurrent requests.
+            $reservation->refresh();
 
             // Verify state transition & Update the reservation status to APPROVED
             $reservation->transitionTo(ReservationState::APPROVED);
@@ -132,7 +140,7 @@ class ReservationService
     {
         $reservation = $this->reservationRepository->findById($id);
         if (!$reservation) {
-            throw new Exception("Reservation not found");
+            throw (new ModelNotFoundException())->setModel(Reservation::class, [$id]);
         }
 
         return $reservation;

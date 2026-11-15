@@ -31,6 +31,22 @@ class ReservationRepository implements ReservationRepositoryInterface
             ->toArray();
     }
 
+    /**
+     * Return reservations for tools owned by the authenticated lender.
+     * Include the borrower name without exposing unrelated profile fields.
+     */
+    public function findReceivedByOwnerId(int $ownerId): array
+    {
+        return Reservation::query()
+            ->with(['tool', 'borrower:id,name'])
+            ->whereHas('tool', function ($query) use ($ownerId) {
+                $query->where('owner_id', $ownerId);
+            })
+            ->orderByDesc('created_at')
+            ->get()
+            ->toArray();
+    }
+
     public function findByToolId(int $toolId): array
     {
         return Reservation::where('tool_id', $toolId)->get()->toArray();
