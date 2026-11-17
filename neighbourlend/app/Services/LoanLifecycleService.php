@@ -99,6 +99,11 @@ class LoanLifecycleService
                 throw (new ModelNotFoundException()->setModel(Reservation::class, [$reservationId]));
             }
 
+            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
+            if (!$tool) {
+                throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
+            }
+
             // Authorization: Lender only
             if ($tool->owner_id !== $userId) {
                 throw new AuthorizationException('Only the tool owner can inspect the tool.');
@@ -108,11 +113,6 @@ class LoanLifecycleService
                 throw new DomainException(
                     'Only returned reservations can be inspected.'
                 );
-            }
-
-            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
-            if (!$tool) {
-                throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
             }
 
             $reservation->returned_condition = $returnedCondition;
@@ -155,14 +155,14 @@ class LoanLifecycleService
                 throw (new ModelNotFoundException()->setModel(Reservation::class, [$reservationId]));
             }
 
-            // Authorization: Lender only
-            if ($tool->owner_id !== $userId) {
-                throw new AuthorizationException('Only the tool owner can close the reservation.');
-            }
-
             $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
             if (!$tool) {
                 throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
+            }
+
+            // Authorization: Lender only
+            if ($tool->owner_id !== $userId) {
+                throw new AuthorizationException('Only the tool owner can close the reservation.');
             }
 
             if ($tool->availability_status === ToolStatus::INSPECTION && $reservation->returned_condition !== ToolReturnedCondition::GOOD) {
