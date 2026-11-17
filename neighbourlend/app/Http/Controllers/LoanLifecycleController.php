@@ -3,18 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Services\LoanLifecycleService;
-use App\Services\ToolService;
-use App\Repositories\Interfaces\ReservationRepositoryInterface;
-use DomainException;
+use App\Domain\States\ToolReturnedCondition;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use DomainException;
 
 class LoanLifecycleController extends Controller
 {
     public function __construct(
-        private ToolService $toolService,
-        private LoanLifecycleService $loanLifecycleService,
-        private ReservationRepositoryInterface $reservationRepository
+        private LoanLifecycleService $loanLifecycleService
     ) {}
 
     public function handOff(Request $request, int $reservationId): JsonResponse
@@ -50,6 +48,13 @@ class LoanLifecycleController extends Controller
     public function inspect(Request $request, int $reservationId): JsonResponse
     {
         try {
+            $data = $request->validate([
+                'returned_condition' => [
+                    'required',
+                    Rule::enum(ToolReturnedCondition::class),
+                ],
+            ]);
+
             $userId = $request->user()->id;
             $reservation = $this->loanLifecycleService->inspectTool(
                 $reservationId,
