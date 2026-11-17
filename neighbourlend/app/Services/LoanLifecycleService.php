@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\Domain\Models\Reservation;
+use App\Domain\Models\Tool;
 use App\Domain\States\ToolStatus;
 use App\Domain\States\ToolReturnedCondition;
 use App\Domain\States\ReservationState;
 use App\Repositories\Interfaces\ReservationRepositoryInterface;
 use App\Repositories\Interfaces\ToolRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
 use InvalidArgumentException;
 use DomainException;
@@ -24,17 +28,17 @@ class LoanLifecycleService
         return DB::transaction(function () use ($reservationId, $userId) {
             $reservation = $this->reservationRepository->findById($reservationId);
             if (!$reservation) {
-                throw new Exception('Reservation not found.');
+                throw (new ModelNotFoundException()->setModel(Reservation::class, [$reservationId]));
             }
 
             $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
             if (!$tool) {
-                throw new Exception('Tool not found.');
+                throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
             }
 
             // Authorization: Lender only
             if ($tool->owner_id !== $userId) {
-                throw new Exception('Only the tool owner can hand off the tool.');
+                throw new AuthorizationException('Only the tool owner can hand off the tool.');
             }
 
             // Verify state transition & Update the reservation status to ACTIVE
@@ -58,17 +62,17 @@ class LoanLifecycleService
         return DB::transaction(function () use ($reservationId, $userId) {
             $reservation = $this->reservationRepository->findById($reservationId);
             if (!$reservation) {
-                throw new Exception('Reservation not found.');
+                throw (new ModelNotFoundException()->setModel(Reservation::class, [$reservationId]));
             }
 
             $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
             if (!$tool) {
-                throw new Exception('Tool not found.');
+                throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
             }
 
             // Authorization: Borrower only
             if ($reservation->borrower_id !== $userId) {
-                throw new Exception('Only the borrower can return the tool.');
+                throw new AuthorizationException('Only the borrower can return the tool.');
             }
 
             // Verify state transition & Update the reservation status to RETURNED
@@ -92,23 +96,23 @@ class LoanLifecycleService
         return DB::transaction(function () use ($reservationId, $returnedCondition, $userId) {
             $reservation = $this->reservationRepository->findById($reservationId);
             if (!$reservation) {
-                throw new Exception('Reservation not found.');
+                throw (new ModelNotFoundException()->setModel(Reservation::class, [$reservationId]));
+            }
+
+            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
+            if (!$tool) {
+                throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
+            }
+
+            // Authorization: Lender only
+            if ($tool->owner_id !== $userId) {
+                throw new AuthorizationException('Only the tool owner can inspect the tool.');
             }
 
             if (!$reservation->status->canBeInspected()) {
                 throw new DomainException(
                     'Only returned reservations can be inspected.'
                 );
-            }
-
-            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
-            if (!$tool) {
-                throw new Exception('Tool not found.');
-            }
-
-            // Authorization: Lender only
-            if ($tool->owner_id !== $userId) {
-                throw new Exception('Only the tool owner can inspect the tool.');
             }
 
             $reservation->returned_condition = $returnedCondition;
@@ -148,31 +152,31 @@ class LoanLifecycleService
         return DB::transaction(function () use ($reservationId, $userId) {
             $reservation = $this->reservationRepository->findById($reservationId);
             if (!$reservation) {
-                throw new Exception('Reservation not found.');
+                throw (new ModelNotFoundException()->setModel(Reservation::class, [$reservationId]));
             }
-
-            // Verify state transition & Update the reservation status to CLOSED
-            $reservation->transitionTo(ReservationState::CLOSED);
 
             $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
             if (!$tool) {
-                throw new Exception('Tool not found.');
+                throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
             }
 
             // Authorization: Lender only
             if ($tool->owner_id !== $userId) {
-                throw new Exception('Only the tool owner can close the reservation.');
+                throw new AuthorizationException('Only the tool owner can close the reservation.');
             }
 
             if ($tool->availability_status === ToolStatus::INSPECTION && $reservation->returned_condition !== ToolReturnedCondition::GOOD) {
-                throw new Exception('Tool is still under inspection or has pending issues.');
+                throw new DomainException('Tool is still under inspection or has pending issues.');
             }
 
             if ($reservation->returned_condition == ToolReturnedCondition::GOOD) {
                 $tool->availability_status = ToolStatus::AVAILABLE;
             } else {
-                throw new Exception('The tool condition is not valid for closing the reservation and might be on dispute.');
+                throw new DomainException('The tool condition is not valid for closing the reservation and might be on dispute.');
             }
+
+            // Verify state transition & Update the reservation status to CLOSED
+            $reservation->transitionTo(ReservationState::CLOSED);
 
             $toolSaved = $this->toolRepository->save($tool);
 

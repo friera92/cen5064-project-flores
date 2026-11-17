@@ -49,6 +49,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/{reservation}/cancel', [ReservationController::class, 'cancel'])->whereNumber('reservation');
         Route::post('/quote', [ReservationController::class, 'quote']);
     });
+    
+    Route::prefix('/loan')->group(function () {
+        Route::patch('/{reservation}/handoff', [\App\Http\Controllers\LoanLifecycleController::class, 'handOff'])->whereNumber('reservation');
+        Route::patch('/{reservation}/return', [\App\Http\Controllers\LoanLifecycleController::class, 'return'])->whereNumber('reservation');
+        Route::patch('/{reservation}/inspect', [\App\Http\Controllers\LoanLifecycleController::class, 'inspect'])->whereNumber('reservation');
+        Route::patch('/{reservation}/close', [\App\Http\Controllers\LoanLifecycleController::class, 'close'])->whereNumber('reservation');
+    });
 });
 
 // Route::middleware(['auth:sanctum', 'can:admin-access'])->prefix('admin')->group(function () {
