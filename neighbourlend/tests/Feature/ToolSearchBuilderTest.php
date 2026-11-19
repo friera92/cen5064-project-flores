@@ -107,6 +107,20 @@ class ToolSearchBuilderTest extends TestCase
         $this->assertSame(1, $results->total());
         $this->assertSame($match->id, $results->items()[0]->id);
         $this->assertTrue($results->items()[0]->relationLoaded('category'));
+
+        // Asserts for the eager-loaded 'owner' relationship to ensure that the owner data is available without additional queries.
+        $this->assertTrue(
+            $results->items()[0]->relationLoaded('category')
+        );
+
+        $this->assertTrue(
+            $results->items()[0]->relationLoaded('owner')
+        );
+
+        $this->assertSame(
+            $owner->id,
+            $results->items()[0]->owner->id
+        );
     }
 
     public function test_rate_filter_is_inclusive_at_both_boundaries(): void

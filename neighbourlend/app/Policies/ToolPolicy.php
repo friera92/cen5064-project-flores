@@ -14,7 +14,7 @@ class ToolPolicy
 
     public function delete(User $user, Tool $tool): bool
     {
-        return $user->id === $tool->owner_id;
+        return $user->id === $tool->owner_id || $user->isAdmin();
     }
 
     public function reserve(User $user, Tool $tool): bool
