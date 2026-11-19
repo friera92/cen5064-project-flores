@@ -110,9 +110,8 @@ class ToolController extends Controller
 
     public function destroy(ToolRequest $request, Tool $tool): Response|JsonResponse
     {
-        // Reuse 'update' ability for backward compatibility with existing ToolPolicy.
-        // When ToolPolicy::delete exists, replace 'update' with 'delete'.
-        $this->authorize('update', $tool);
+        // Authorize deletion through the dedicated ToolPolicy ability.
+        $this->authorize('delete', $tool);
         try {
             $this->toolService->deleteTool($tool);
         } catch (DomainException $e) {

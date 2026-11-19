@@ -20,7 +20,7 @@ final class ToolSearchBuilder
 
     public function __construct()
     {
-        $this->query = Tool::query()->with('category:id,name');
+        $this->query = Tool::query()->with(['category:id,name', 'owner:id,name']);
     }
 
     public function forOwner(?int $ownerId): self
