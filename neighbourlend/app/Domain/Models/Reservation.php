@@ -30,10 +30,10 @@ class Reservation extends Model
         return [
             'start_date' => 'datetime',
             'end_date' => 'datetime',
-            'canceled_at' => 'datetime',
             'status' => ReservationState::class,
             'returned_condition' => ToolReturnedCondition::class,
             'total_cost' => 'decimal:2',
+            'canceled_at' => 'datetime',
         ];
     }
 

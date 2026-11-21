@@ -28,6 +28,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        
+        Schema::table('reservations', function (Blueprint $table) {
+            $table->dropForeign(['canceled_by_user_id']);
+            $table->dropColumn([
+                'cancellation_reason',
+                'canceled_by_user_id',
+                'canceled_at',
+            ]);
+        });
     }
 };

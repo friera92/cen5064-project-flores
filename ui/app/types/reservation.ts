@@ -17,6 +17,10 @@ export interface Reservation {
   total_cost: number | string
   status: ReservationStatus
   returned_condition: string | null
+  borrower_id?: number
+  cancellation_reason?: string | null
+  canceled_by_user_id?: number | null
+  canceled_at?: string | null
 
   // Relaciones propuestas para la respuesta del frontend
   tool: Tool

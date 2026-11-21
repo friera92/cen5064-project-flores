@@ -14,6 +14,8 @@ use App\Repositories\Interfaces\ToolRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
+use DomainException;
+use Illuminate\Validation\ValidationException;
 use Exception;
 use InvalidArgumentException;
 
@@ -117,36 +119,48 @@ class ReservationService
                 throw (new ModelNotFoundException())->setModel(Reservation::class, [$reservationId]);
             }
 
-            $isBorrower = $reservation->borrower_id === $userId;
-            $isLender = $reservation->tool && $reservation->tool->owner_id === $userId;
-
-            if (!$reason && $isLender) {
-                throw new InvalidArgumentException('Cancellation reason is required.');
+            // Use the same tool lock as approval, then re-read the reservation state.
+            $tool = $this->toolRepository->findByIdWithLock($reservation->tool_id);
+            if (!$tool) {
+                throw (new ModelNotFoundException())->setModel(Tool::class, [$reservation->tool_id]);
             }
+            $reservation->refresh();
+
+            $isBorrower = $reservation->borrower_id === $userId;
+            $isLender = $tool->owner_id === $userId;
 
             if (!$isBorrower && !$isLender) {
                 throw new AuthorizationException('You are not authorized to cancel this reservation.');
             }
 
             if ($reservation->status === ReservationState::APPROVED && !$isBorrower) {
-                throw new AuthorizationException(
-                    'Only the borrower can cancel an approved reservation.'
-                );
+                throw new AuthorizationException('Only the borrower can cancel an approved reservation.');
             }
 
-            // Verify state transition & Update the reservation status to CANCELED
+            // Domain state rules take precedence over reason validation (409 before 422).
             $reservation->transitionTo(ReservationState::CANCELED);
+
+            $reason = $reason === null ? null : trim($reason);
+            $reason = $reason === '' ? null : $reason;
+
+            if ($reason !== null && mb_strlen($reason) > 500) {
+                throw ValidationException::withMessages([
+                    'cancellation_reason' => ['The cancellation reason must not exceed 500 characters.'],
+                ]);
+            }
+            if ($isLender && $reason === null) {
+                throw ValidationException::withMessages([
+                    'cancellation_reason' => ['A reason is required when the lender cancels a request.'],
+                ]);
+            }
 
             $reservation->cancellation_reason = $reason;
             $reservation->canceled_by_user_id = $userId;
             $reservation->canceled_at = now();
 
-            $result = $this->reservationRepository->save($reservation);
-
-            if (!$result) {
+            if (!$this->reservationRepository->save($reservation)) {
                 throw new Exception('Failed to cancel the reservation.');
             }
-
             return $reservation;
         });
     }

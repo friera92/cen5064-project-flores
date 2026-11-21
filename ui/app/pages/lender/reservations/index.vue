@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { LenderReservation } from '~/types/lender-reservation'
 import type { ReservationStatus } from '~/types/reservation'
+import CancelReservationModal from '~/components/reservations/CancelReservationModal.vue'
+import { getReservationErrorMessage } from '~/utils/getReservationErrorMessage'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -12,6 +14,8 @@ const loading = ref(true)
 const pendingId = ref<number | null>(null)
 const errorMessage = ref('')
 const successMessage = ref('')
+const cancellationTarget = ref<LenderReservation | null>(null)
+const cancellationError = ref('')
 
 const statuses: Array<{ label: string; value: string }> = [
   { label: 'All statuses', value: 'ALL' },
@@ -61,24 +65,54 @@ async function loadReservations(): Promise<void> {
     const response = await getReceivedReservations()
     reservations.value = response.data
   } catch (error: any) {
-    errorMessage.value = error?.data?.message ?? 'Unable to load incoming reservations. Please try again.'
+    errorMessage.value = getReservationErrorMessage(error)
   } finally {
     loading.value = false
   }
 }
 
-type LenderAction = 'approve' | 'cancel' | 'handoff'
+type LenderAction = 'approve' | 'handoff'
+
+function openCancelModal(item: LenderReservation): void {
+  if (item.status !== 'REQUESTED' || pendingId.value !== null) return
+  cancellationError.value = ''
+  cancellationTarget.value = item
+}
+
+function closeCancelModal(): void {
+  if (pendingId.value !== null) return
+  cancellationTarget.value = null
+  cancellationError.value = ''
+}
+
+async function confirmCancellation(reason: string | null): Promise<void> {
+  const item = cancellationTarget.value
+  if (!item || pendingId.value !== null) return
+  pendingId.value = item.id
+  cancellationError.value = ''
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    const response = await cancelReservation(item.id, reason)
+    cancellationTarget.value = null
+    successMessage.value = response.message
+    await loadReservations()
+  } catch (error: any) {
+    cancellationError.value = getReservationErrorMessage(error)
+    await loadReservations()
+  } finally {
+    pendingId.value = null
+  }
+}
 
 async function performAction(item: LenderReservation, action: LenderAction): Promise<void> {
-  const valid = (action === 'approve' || action === 'cancel') && item.status === 'REQUESTED'
-    || action === 'handoff' && item.status === 'APPROVED'
+  const valid = (action === 'approve' && item.status === 'REQUESTED')
+    || (action === 'handoff' && item.status === 'APPROVED')
   if (!valid || pendingId.value !== null) return
 
   const confirmation = action === 'approve'
     ? 'Approve this equipment reservation?'
-    : action === 'cancel'
-      ? 'Cancel this reservation request?'
-      : 'Confirm the tool was physically handed over to the borrower? This starts the active loan.'
+    : 'Confirm the tool was physically handed over to the borrower? This starts the active loan.'
   if (!window.confirm(confirmation)) return
 
   pendingId.value = item.id
@@ -87,14 +121,11 @@ async function performAction(item: LenderReservation, action: LenderAction): Pro
   try {
     const result = action === 'approve'
       ? await approveReservation(item.id)
-      : action === 'cancel'
-        ? await cancelReservation(item.id)
-        : await handOffReservation(item.id)
+      : await handOffReservation(item.id)
     successMessage.value = result.message
     await loadReservations()
   } catch (error: any) {
-    const mutationError = error?.data?.message ?? 'Unable to update the reservation. Please refresh and try again.'
-    // The server is authoritative; refresh even after a failed mutation.
+    const mutationError = getReservationErrorMessage(error)
     await loadReservations()
     errorMessage.value = mutationError
   } finally {
@@ -108,6 +139,14 @@ onMounted(loadReservations)
 <template>
   <div class="min-h-screen bg-[#FAF9F6]">
     <AppHeader />
+    <CancelReservationModal
+      :open="cancellationTarget !== null"
+      :reason-required="true"
+      :submitting="pendingId !== null"
+      :error="cancellationError"
+      @close="closeCancelModal"
+      @confirm="confirmCancellation"
+    />
     <UContainer class="py-10 md:py-14">
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -178,7 +217,7 @@ onMounted(loadReservations)
                   <div class="flex flex-wrap gap-2">
                     <NuxtLink :to="`/lender/reservations/${item.id}`" class="rounded-lg border border-[#E5E9E4] px-3 py-2 font-medium text-[#172B25]">View</NuxtLink>
                     <button v-if="item.status === 'REQUESTED'" type="button" :disabled="pendingId !== null" class="rounded-lg bg-[#176B52] px-3 py-2 font-medium text-white disabled:opacity-50" @click="performAction(item, 'approve')">Approve</button>
-                    <button v-if="item.status === 'REQUESTED'" type="button" :disabled="pendingId !== null" class="rounded-lg border border-red-200 px-3 py-2 font-medium text-red-700 disabled:opacity-50" @click="performAction(item, 'cancel')">Cancel</button>
+                    <button v-if="item.status === 'REQUESTED'" type="button" :disabled="pendingId !== null" class="rounded-lg border border-red-200 px-3 py-2 font-medium text-red-700 disabled:opacity-50" @click="openCancelModal(item)">Cancel</button>
                     <button v-if="item.status === 'APPROVED'" type="button" :disabled="pendingId !== null" class="rounded-lg bg-[#176B52] px-3 py-2 font-medium text-white disabled:opacity-50" @click="performAction(item, 'handoff')">Confirm handoff</button>
                     <span v-if="item.status === 'ACTIVE'" class="self-center text-xs text-[#66736D]">Awaiting borrower return</span>
                     <span v-if="item.status === 'RETURNED'" class="self-center text-xs text-[#66736D]">Inspection in next phase</span>

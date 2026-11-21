@@ -54,9 +54,10 @@ export function useReservations() {
     })
   }
 
-  function cancelReservation(id: number) {
+  function cancelReservation(id: number, reason: string | null = null) {
     return request<ReservationMutationResponse>(`/api/reservation/${id}/cancel`, {
       method: "PATCH",
+      body: { cancellation_reason: reason?.trim() || null },
     });
   }
 

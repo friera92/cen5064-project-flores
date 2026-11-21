@@ -26,7 +26,6 @@ class ReservationRequest extends FormRequest
             'tool_id' => ['required', 'integer', 'exists:tools,id'],
             'start_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
-            'cancellation_reason' => ['required_if:is_lender,true', 'string', 'max:255'],
         ];
     }
 }

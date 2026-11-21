@@ -186,20 +186,10 @@ class ReservationApiFlowTest extends TestCase
 
         Sanctum::actingAs($otherBorrower);
 
-        // Current ReservationService throws a plain Exception for an overlap.
-        // Expose it here rather than incorrectly treating the HTTP 500 as success.
-        // API should eventually map this conflict to HTTP 409.
-        $this->withoutExceptionHandling();
-
-        try {
-            $this->postJson('/api/reservation/new', $payload);
-            $this->fail('An overlapping reservation must not be created.');
-        } catch (Exception $e) {
-            $this->assertSame(
-                'The tool is already booked or requested for the selected dates.',
-                $e->getMessage()
-            );
-        }
+        // The controller now translates domain booking conflicts to HTTP 409.
+        $this->postJson('/api/reservation/new', $payload)
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'The tool is already booked or requested for the selected dates.');
 
         $this->assertDatabaseCount('reservations', 1);
     }
