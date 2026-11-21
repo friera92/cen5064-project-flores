@@ -180,7 +180,10 @@ onMounted(loadReservation)
       @confirm="confirmCancellation"
     />
     <UContainer class="py-10 md:py-14">
-      <NuxtLink to="/lender/reservations" class="text-sm font-semibold text-[#176B52]">← Incoming Reservations</NuxtLink>
+      <NuxtLink
+        :to="reservation?.status === 'DISPUTED' ? '/lender/reservations?tab=disputed' : '/lender/reservations'"
+        class="text-sm font-semibold text-[#176B52]"
+      >← {{ reservation?.status === 'DISPUTED' ? 'Disputes' : 'Incoming Reservations' }}</NuxtLink>
 
       <p v-if="successMessage" role="status" class="mt-6 rounded-xl border border-[#CDE4D7] bg-[#E9F4ED] p-4 text-sm text-[#176B52]">{{ successMessage }}</p>
       <p v-if="errorMessage" role="alert" class="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ errorMessage }}</p>
