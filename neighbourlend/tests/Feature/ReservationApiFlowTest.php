@@ -302,7 +302,11 @@ class ReservationApiFlowTest extends TestCase
 
     public function test_owner_info_on_reservations(): void
     {
-        $owner = User::factory()->create();
+        $owner = User::factory()->create([
+            'name' => 'Test Lender',
+            'phone' => '305-555-0123',
+            'address' => 'Miami, FL',
+        ]);
         $borrower = User::factory()->create();
         $stranger = User::factory()->create();
         $tool = $this->makeTool($owner);
