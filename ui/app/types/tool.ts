@@ -27,7 +27,7 @@ export interface ToolOwner {
   id: number
   name: string
   address: string | null
-  phone: string | null
+  phone?: string | null
 }
 
 export interface ToolInput {

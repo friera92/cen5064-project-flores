@@ -299,4 +299,38 @@ class ReservationApiFlowTest extends TestCase
 
         $this->assertDatabaseCount('reservations', 0);
     }
+
+    public function test_owner_info_on_reservations(): void
+    {
+        $owner = User::factory()->create();
+        $borrower = User::factory()->create();
+        $stranger = User::factory()->create();
+        $tool = $this->makeTool($owner);
+
+        // Borrower can view lender contact information.
+        Sanctum::actingAs($borrower);
+        $reservation = $this->postJson('/api/reservation/new', $this->payload($tool))
+            ->assertCreated();
+        $reservationId = (int) $reservation->json('data.id');
+
+        $this->getJson("/api/reservation/{$reservationId}")
+            ->assertOk()
+            ->assertJsonPath('data.tool.owner.name', $owner->name)
+            ->assertJsonPath('data.tool.owner.phone', $owner->phone)
+            ->assertJsonPath('data.tool.owner.address', $owner->address)
+            ->assertJsonMissingPath('data.tool.owner.email');
+
+        // Lender does not receive owner contact details.
+        Sanctum::actingAs($owner);
+
+        $this->getJson("/api/reservation/{$reservationId}")
+            ->assertOk()
+            ->assertJsonMissingPath('data.tool.owner');
+
+        // An unrelated user cannot view the reservation.
+        Sanctum::actingAs($stranger);
+
+        $this->getJson("/api/reservation/{$reservationId}")
+            ->assertForbidden();
+    }
 }

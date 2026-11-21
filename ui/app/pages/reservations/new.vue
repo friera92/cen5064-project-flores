@@ -48,64 +48,70 @@ const today = ref('')
 
 const validDates = computed(() =>
   Boolean(
-	startDate.value
-	&& endDate.value
-	&& startDate.value >= today.value
-	&& endDate.value >= startDate.value
+    tool.value?.id &&
+    today.value &&
+    startDate.value &&
+    endDate.value &&
+    startDate.value >= today.value &&
+    endDate.value >= startDate.value
   )
 )
-
-if (!tool) {
-  throw createError({
-	statusCode: 404,
-	statusMessage: 'Equipment not found'
-  })
-}
 
 onMounted(() => {
   today.value = localToday()
 })
 
+let quoteRequestVersion = 0
+
 watch(
-  [startDate, endDate],
+  [startDate, endDate, tool, today],
   async () => {
-	quote.value = null
-	quoteError.value = ''
-	reservationError.value = ''
+    const version = ++quoteRequestVersion
 
-	if (
-	  startDate.value
-	  && endDate.value
-	  && endDate.value < startDate.value
-	) {
-	  endDate.value = ''
-	  return
-	}
+    quote.value = null
+    quoteError.value = ''
+    reservationError.value = ''
+    quoteLoading.value = false
 
-	if (!validDates.value) {
-	  return
-	}
+    if (
+      startDate.value &&
+      endDate.value &&
+      endDate.value < startDate.value
+    ) {
+      endDate.value = ''
+      return
+    }
 
-	quoteLoading.value = true
+    const selectedTool = tool.value
 
-	try {
-	  const response = await getQuote({
-		tool_id: tool.value.id,
-		start_date: startDate.value,
-		end_date: endDate.value
-	  })
+    if (!selectedTool || !validDates.value) {
+      return
+    }
 
-	  quote.value = response.data
-	  console.log(quote.value)
-	} catch (error) {
-	  console.error(error)
+    quoteLoading.value = true
 
-	  quoteError.value =
-		'Unable to calculate the estimated cost.'
-	} finally {
-	  quoteLoading.value = false
-	}
-  }
+    try {
+      const response = await getQuote({
+        tool_id: selectedTool.id,
+        start_date: startDate.value,
+        end_date: endDate.value
+      })
+
+      if (version === quoteRequestVersion) {
+        quote.value = response.data
+      }
+    } catch (error) {
+      if (version === quoteRequestVersion) {
+        quoteError.value =
+          'Unable to calculate the estimated cost.'
+      }
+    } finally {
+      if (version === quoteRequestVersion) {
+        quoteLoading.value = false
+      }
+    }
+  },
+  { immediate: true }
 )
 
 function queryString(value: unknown): string {
@@ -169,11 +175,18 @@ async function handleReservation() {
 	</UContainer>
 
 	<UContainer v-else-if="toolError || !tool">
-	  <p>Unable to load the selected equipment.</p>
+	  <p v-if="toolError?.statusCode === 404">
+		Equipment not found.
+	  </p>
+
+		<p v-else>
+			Unable to load the selected equipment.
+			Please try again.
+		</p>
 	</UContainer>
 
 
-	<UContainer class="max-w-5xl py-10 md:py-14">
+	<UContainer v-else class="max-w-5xl py-10 md:py-14">
 	  <NuxtLink
 		:to="`/equipment/${toolId}`"
 		class="inline-flex items-center gap-2 text-sm

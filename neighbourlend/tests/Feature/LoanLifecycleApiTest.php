@@ -252,7 +252,7 @@ class LoanLifecycleApiTest extends TestCase
 
         $this->patchJson("/api/loan/{$id}/inspect", ['returned_condition' => 'GOOD'])
             ->assertStatus(409)
-            ->assertJsonPath('message', 'Only returned reservations can be inspected.');
+            ->assertJsonPath('message', 'Only returned reservations awaiting inspection can be inspected.');
 
         $this->assertDatabaseHas('reservations', [
             'id' => $id,
