@@ -27,7 +27,16 @@ const canRequestReservation = computed(() =>
 
 onMounted(async () => {
   try { tool.value = await getTool(Number(route.params.id)); console.log('Tool data:', tool.value); }
-  catch (e: any) { error.value = e?.data?.message || 'Equipment not found.' }
+  catch (e: any) {
+    const status =
+      e?.response?.status ??
+      e?.statusCode ??
+      e?.status
+
+    error.value = status === 404
+      ? 'Equipment not found.'
+      : 'Unable to load equipment. Please try again.'
+  }
   finally { loading.value = false }
 })
 </script>
