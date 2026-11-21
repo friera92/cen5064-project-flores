@@ -70,8 +70,15 @@ class ReservationController extends Controller
             'You are not authorized to view this reservation.'
         );
 
+        $relations = ['tool', 'borrower:id,name'];
+
+        // Owner contact details are provided only to the borrower.
+        if ($isBorrower) {
+            $relations[] = 'tool.owner:id,name,address,phone';
+        }
+
         return response()->json([
-            'data' => $item->load(['tool', 'borrower:id,name'])
+            'data' => $item->load($relations)
         ]);
     }
 

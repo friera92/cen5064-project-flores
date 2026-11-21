@@ -9,12 +9,7 @@ definePageMeta({ middleware: 'auth' })
 const { getReceivedReservations, approveReservation, cancelReservation, handOffReservation } = useReservations()
 
 const reservations = ref<LenderReservation[]>([])
-const route = useRoute()
-const activeTab = computed(() => route.query.tab === 'disputed' ? 'disputed' : 'incoming')
 const selectedStatus = ref('ALL')
-
-// Reset the status filter when switching between reservations and disputes.
-watch(activeTab, () => { selectedStatus.value = 'ALL' })
 const loading = ref(true)
 const pendingId = ref<number | null>(null)
 const errorMessage = ref('')
@@ -32,20 +27,12 @@ const statuses: Array<{ label: string; value: string }> = [
   { label: 'Canceled', value: 'CANCELED' },
 ]
 
-const disputeCount = computed(() => reservations.value.filter(item => item.status === 'DISPUTED').length)
-
-// A reservation belongs to exactly one tab, based on its current server status.
-// Changing the status to DISPUTED automatically removes it from the incoming list.
+// Disputes have their own global navigation page for both lenders and borrowers.
 const filteredReservations = computed(() => {
-  const tabReservations = reservations.value.filter(item =>
-    activeTab.value === 'disputed'
-      ? item.status === 'DISPUTED'
-      : item.status !== 'DISPUTED'
-  )
-
-  return activeTab.value === 'disputed' || selectedStatus.value === 'ALL'
-    ? tabReservations
-    : tabReservations.filter(item => item.status === selectedStatus.value)
+  const incoming = reservations.value.filter(item => item.status !== 'DISPUTED')
+  return selectedStatus.value === 'ALL'
+    ? incoming
+    : incoming.filter(item => item.status === selectedStatus.value)
 })
 
 const pendingCount = computed(() => reservations.value.filter(item => item.status === 'REQUESTED').length)
@@ -168,7 +155,7 @@ onMounted(loadReservations)
         <div>
           <h1 class="text-3xl font-bold text-[#172B25]">Incoming Reservations</h1>
           <p class="mt-2 text-[#66736D]">Review and manage requests for equipment you own.</p>
-          <p v-if="!loading && activeTab === 'incoming'" class="mt-2 text-sm font-medium text-[#176B52]">
+          <p v-if="!loading" class="mt-2 text-sm font-medium text-[#176B52]">
             {{ pendingCount }} {{ pendingCount === 1 ? 'request awaiting review' : 'requests awaiting review' }}
           </p>
         </div>
@@ -177,28 +164,9 @@ onMounted(loadReservations)
         </NuxtLink>
       </div>
 
-      <nav aria-label="Reservation sections" class="mt-8 flex flex-wrap gap-2 border-b border-[#E5E9E4]">
-        <NuxtLink
-          to="/lender/reservations"
-          :aria-current="activeTab === 'incoming' ? 'page' : undefined"
-          class="inline-flex items-center border-b-2 px-4 py-3 text-sm font-semibold transition-colors"
-          :class="activeTab === 'incoming' ? 'border-[#176B52] text-[#176B52]' : 'border-transparent text-[#66736D] hover:text-[#176B52]'"
-        >
-          Reservations
-        </NuxtLink>
-        <NuxtLink
-          to="/lender/reservations?tab=disputed"
-          :aria-current="activeTab === 'disputed' ? 'page' : undefined"
-          class="inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors"
-          :class="activeTab === 'disputed' ? 'border-red-700 text-red-700' : 'border-transparent text-[#66736D] hover:text-red-700'"
-        >
-          Disputes
-          <span class="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700">{{ disputeCount }}</span>
-        </NuxtLink>
-      </nav>
 
       <div class="mt-5 flex flex-wrap items-end gap-3">
-        <label v-if="activeTab === 'incoming'" class="flex min-w-48 flex-col gap-2 text-sm font-medium text-[#172B25]">
+        <label class="flex min-w-48 flex-col gap-2 text-sm font-medium text-[#172B25]">
           Filter by status
           <select v-model="selectedStatus" class="rounded-xl border border-[#E5E9E4] bg-white px-4 py-3">
             <option v-for="option in statuses" :key="option.value" :value="option.value">{{ option.label }}</option>
@@ -213,9 +181,9 @@ onMounted(loadReservations)
       <p v-if="errorMessage" role="alert" class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{{ errorMessage }}</p>
       <p v-if="loading" role="status" class="mt-6 rounded-2xl border bg-white p-10 text-center text-[#66736D]">Loading incoming reservations...</p>
       <div v-else-if="!filteredReservations.length" class="mt-6 rounded-2xl border border-[#E5E9E4] bg-white px-6 py-14 text-center">
-        <h2 class="text-xl font-semibold text-[#172B25]">{{ activeTab === 'disputed' ? 'No disputed reservations' : 'No reservations found' }}</h2>
-        <p class="mt-2 text-[#66736D]">{{ activeTab === 'disputed' ? 'Reservations move here automatically when the lender inspection marks them as disputed.' : selectedStatus === 'ALL' ? 'No reservations are currently available in this section.' : 'There are no reservations with this status.' }}</p>
-        <button v-if="activeTab === 'incoming' && selectedStatus !== 'ALL'" type="button" class="mt-4 rounded-xl border px-4 py-2" @click="selectedStatus = 'ALL'">Show all</button>
+        <h2 class="text-xl font-semibold text-[#172B25]">No reservations found</h2>
+        <p class="mt-2 text-[#66736D]">{{ selectedStatus === 'ALL' ? 'No incoming reservations are currently available.' : 'There are no reservations with this status.' }}</p>
+        <button v-if="selectedStatus !== 'ALL'" type="button" class="mt-4 rounded-xl border px-4 py-2" @click="selectedStatus = 'ALL'">Show all</button>
       </div>
 
       <div v-else class="mt-6 overflow-hidden rounded-2xl border border-[#E5E9E4] bg-white">

@@ -181,7 +181,7 @@ onMounted(loadReservation)
     />
     <UContainer class="py-10 md:py-14">
       <NuxtLink
-        :to="reservation?.status === 'DISPUTED' ? '/lender/reservations?tab=disputed' : '/lender/reservations'"
+        :to="reservation?.status === 'DISPUTED' ? '/disputes' : '/lender/reservations'"
         class="text-sm font-semibold text-[#176B52]"
       >← {{ reservation?.status === 'DISPUTED' ? 'Disputes' : 'Incoming Reservations' }}</NuxtLink>
 

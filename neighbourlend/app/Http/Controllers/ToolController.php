@@ -23,9 +23,15 @@ class ToolController extends Controller
         return response()->json($this->toolService->searchTools($this->filters($request)));
     }
 
-    public function show(Tool $tool): JsonResponse
+    public function show(Request $request, Tool $tool): JsonResponse
     {
-        return response()->json($tool->load(['category:id,name', 'owner:id,name,address']));
+        // Lender phone is contact information for signed-in users only.
+        // The public tool page continues to expose just the name and address.
+        $ownerRelation = $request->user('sanctum')
+            ? 'owner:id,name,address,phone'
+            : 'owner:id,name,address';
+
+        return response()->json($tool->load(['category:id,name', $ownerRelation]));
     }
 
     public function mine(ToolRequest $request): JsonResponse

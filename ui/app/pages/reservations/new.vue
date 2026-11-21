@@ -285,9 +285,20 @@ async function handleReservation() {
 				{{ tool.title }}
 			  </h3>
 
-			  <p class="mt-2 text-sm text-[#66736D]">
-				{{ tool.owner.address }}
-			  </p>
+			  <dl class="mt-3 space-y-2 text-sm text-[#66736D]">
+				<div>
+				  <dt class="font-semibold text-[#172B25]">Lender</dt>
+				  <dd>{{ tool.owner?.name || 'Owner unavailable' }}</dd>
+				</div>
+				<div>
+				  <dt class="font-semibold text-[#172B25]">Address</dt>
+				  <dd>{{ tool.owner?.address || 'Not provided by owner' }}</dd>
+				</div>
+				<div>
+				  <dt class="font-semibold text-[#172B25]">Phone</dt>
+				  <dd>{{ tool.owner?.phone?.trim() || 'Not provided by owner' }}</dd>
+				</div>
+			  </dl>
 			</div>
 		  </div>
 

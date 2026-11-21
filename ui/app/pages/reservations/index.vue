@@ -15,7 +15,6 @@ const statusOptions = [
   { label: 'Active', value: 'ACTIVE' },
   { label: 'Returned', value: 'RETURNED' },
   { label: 'Closed', value: 'CLOSED' },
-  { label: 'Disputed', value: 'DISPUTED' },
   { label: 'Canceled', value: 'CANCELED' }
 ]
 
@@ -25,14 +24,12 @@ const reservations = ref<Reservation[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 
-const filteredReservations = computed(() =>
-  selectedStatus.value === 'ALL'
-    ? reservations.value
-    : reservations.value.filter(
-        reservation =>
-          reservation.status === selectedStatus.value
-      )
-)
+const filteredReservations = computed(() => {
+  const ongoing = reservations.value.filter(item => item.status !== 'DISPUTED')
+  return selectedStatus.value === 'ALL'
+    ? ongoing
+    : ongoing.filter(item => item.status === selectedStatus.value)
+})
 
 function statusClass(status: ReservationStatus): string {
   switch (status) {

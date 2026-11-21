@@ -180,8 +180,8 @@ onMounted(() => {
     <UContainer class="py-10 md:py-14">
       <div class="mb-6">
         <UButton
-          to="/reservations"
-          label="Back to My Reservations"
+          :to="reservation?.status === 'DISPUTED' ? '/disputes' : '/reservations'"
+          :label="reservation?.status === 'DISPUTED' ? 'Back to Disputes' : 'Back to My Reservations'"
           icon="i-lucide-arrow-left"
           color="neutral"
           variant="ghost"
@@ -343,6 +343,47 @@ onMounted(() => {
             </div>
           </div>
 
+        <section
+          v-if="isBorrower && reservation.tool?.owner"
+          class="mt-7 rounded-xl border border-[#E5E9E4] bg-[#FAF9F6] p-5"
+        >
+          <h2 class="text-lg font-semibold text-[#172B25]">
+            Equipment Owner
+          </h2>
+
+          <p class="mt-1 text-sm text-[#66736D]">
+            Contact information for the lender.
+          </p>
+
+          <dl class="mt-5 grid gap-5 sm:grid-cols-2">
+            <div>
+              <dt class="text-sm text-[#66736D]">
+                Name
+              </dt>
+              <dd class="mt-1 font-medium text-[#172B25]">
+                {{ reservation.tool.owner.name }}
+              </dd>
+            </div>
+
+            <div>
+              <dt class="text-sm text-[#66736D]">
+                Phone
+              </dt>
+              <dd class="mt-1 font-medium text-[#172B25]">
+                {{ reservation.tool.owner.phone?.trim() || 'Not provided by owner' }}
+              </dd>
+            </div>
+
+            <div class="sm:col-span-2">
+              <dt class="text-sm text-[#66736D]">
+                Address
+              </dt>
+              <dd class="mt-1 font-medium text-[#172B25]">
+                {{ reservation.tool.owner.address?.trim() || 'Not provided by owner' }}
+              </dd>
+            </div>
+          </dl>
+        </section>
           <div
             v-if="successMessage"
             class="mt-6 rounded-xl border
