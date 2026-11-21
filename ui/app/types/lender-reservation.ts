@@ -1,5 +1,5 @@
 import type { Tool } from '~/types/tool'
-import type { ReservationStatus } from '~/types/reservation'
+import type { ReservationStatus, ReturnedCondition } from '~/types/reservation'
 
 /** Lender-facing reservation contract returned by the Laravel API. */
 export interface BorrowerSummary {
@@ -7,7 +7,8 @@ export interface BorrowerSummary {
   name: string
 }
 
-export type ReturnedCondition = 'GOOD' | 'DAMAGED' | 'BROKEN' | 'MISSING_PARTS'
+// Re-export so existing lender imports keep working.
+export type { ReturnedCondition } from '~/types/reservation'
 
 export interface LenderReservation {
   id: number

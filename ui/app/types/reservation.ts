@@ -1,5 +1,12 @@
 
-import type { Tool, User } from '~/data/equipment'
+import type { Tool } from '~/types/tool'
+
+export type ReturnedCondition = 'GOOD' | 'DAMAGED' | 'BROKEN' | 'MISSING_PARTS'
+
+export interface BorrowerSummary {
+  id: number
+  name: string
+}
 
 export type ReservationStatus =
   | 'REQUESTED'
@@ -16,15 +23,15 @@ export interface Reservation {
   end_date: string
   total_cost: number | string
   status: ReservationStatus
-  returned_condition: string | null
+  returned_condition: ReturnedCondition | null
   borrower_id?: number
   cancellation_reason?: string | null
   canceled_by_user_id?: number | null
   canceled_at?: string | null
 
-  // Relaciones propuestas para la respuesta del frontend
+  // Laravel reservation detail includes the related tool and borrower.
   tool: Tool
-  borrower?: User
+  borrower?: BorrowerSummary | null
 }
 
 export interface ReservationQuote {

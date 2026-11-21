@@ -8,6 +8,7 @@ const publicNavigation = [
 const authenticatedNavigation = [
   { label: 'My Reservations', to: '/reservations' },
   { label: 'Incoming Reservations', to: '/lender/reservations' },
+  { label: 'Disputes', to: '/disputes' },
   { label: 'My Listings', to: '/my-equipment' }
 ]
 
@@ -40,7 +41,7 @@ async function handleLogout() {
         </span>
       </NuxtLink>
 
-      <nav class="hidden items-center gap-6 md:flex">
+      <nav class="hidden items-center gap-4 xl:flex">
         <NuxtLink v-for="item in navigation" :key="item.to" :to="item.to"
           class="text-sm font-medium text-[#66736D] transition-colors hover:text-[#176B52]"
           active-class="!text-[#176B52]">
@@ -66,7 +67,7 @@ async function handleLogout() {
           <UButton to="/login" icon="i-lucide-user-round" color="neutral" variant="ghost" class="sm:hidden" aria-label="Log in" />
           <UButton to="/register" label="Sign up" class="hidden bg-[#176B52] text-white hover:bg-[#124D3D] sm:flex" />
         </template>
-        <UDropdownMenu :items="navigation" class="md:hidden">
+        <UDropdownMenu :items="navigation" class="xl:hidden">
           <UButton icon="i-lucide-menu" color="neutral" variant="ghost" aria-label="Open navigation" />
         </UDropdownMenu>
       </div>

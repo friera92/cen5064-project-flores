@@ -17,8 +17,17 @@ export interface Tool {
   condition: ToolCondition
   picture: string | null
   picture_url: string | null
+  // The tool show endpoint includes only the public/contact fields needed by the UI.
+  owner?: ToolOwner | null
   category?: Category | null
   created_at?: string
+}
+
+export interface ToolOwner {
+  id: number
+  name: string
+  address: string | null
+  phone?: string | null
 }
 
 export interface ToolInput {

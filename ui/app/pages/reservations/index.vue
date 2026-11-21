@@ -15,7 +15,6 @@ const statusOptions = [
   { label: 'Active', value: 'ACTIVE' },
   { label: 'Returned', value: 'RETURNED' },
   { label: 'Closed', value: 'CLOSED' },
-  { label: 'Disputed', value: 'DISPUTED' },
   { label: 'Canceled', value: 'CANCELED' }
 ]
 
@@ -25,14 +24,12 @@ const reservations = ref<Reservation[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 
-const filteredReservations = computed(() =>
-  selectedStatus.value === 'ALL'
-    ? reservations.value
-    : reservations.value.filter(
-        reservation =>
-          reservation.status === selectedStatus.value
-      )
-)
+const filteredReservations = computed(() => {
+  const ongoing = reservations.value.filter(item => item.status !== 'DISPUTED')
+  return selectedStatus.value === 'ALL'
+    ? ongoing
+    : ongoing.filter(item => item.status === selectedStatus.value)
+})
 
 function statusClass(status: ReservationStatus): string {
   switch (status) {
@@ -135,7 +132,7 @@ onMounted(() => {
                bg-white px-6 py-16 text-center"
       >
 
-        <p class="mt-4 text-lg font-lighttext-[#172B25]">
+        <p class="mt-4 text-lg font-light text-[#172B25]">
           Loading reservations...
         </p>
       </div>
@@ -163,11 +160,15 @@ onMounted(() => {
                    sm:flex-row sm:items-start"
           >
             <img
+              v-if="reservation.tool?.picture_url"
               :src="reservation.tool.picture_url"
               :alt="reservation.tool.title"
               class="rounded-xl object-cover
                      sm:w-48 sm:h-40 sm:shrink-0"
             >
+            <div v-else class="flex h-40 items-center justify-center rounded-xl bg-[#E9F4ED] text-sm text-[#176B52] sm:w-48 sm:shrink-0">
+              No image available
+            </div>
 
             <div class="min-w-0 flex-1">
               <div

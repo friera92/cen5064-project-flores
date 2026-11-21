@@ -36,6 +36,8 @@ class LoanLifecycleService
                 throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
             }
 
+            $reservation->refresh();
+
             // Authorization: Lender only
             if ($tool->owner_id !== $userId) {
                 throw new AuthorizationException('Only the tool owner can hand off the tool.');
@@ -69,6 +71,8 @@ class LoanLifecycleService
             if (!$tool) {
                 throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
             }
+
+            $reservation->refresh();
 
             // Authorization: Borrower only
             if ($reservation->borrower_id !== $userId) {
@@ -104,14 +108,16 @@ class LoanLifecycleService
                 throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
             }
 
+            $reservation->refresh();
+
             // Authorization: Lender only
             if ($tool->owner_id !== $userId) {
                 throw new AuthorizationException('Only the tool owner can inspect the tool.');
             }
 
-            if (!$reservation->status->canBeInspected()) {
+            if (!$reservation->status->canBeInspected() || $reservation->returned_condition !== null) {
                 throw new DomainException(
-                    'Only returned reservations can be inspected.'
+                    'Only returned reservations awaiting inspection can be inspected.'
                 );
             }
 
@@ -159,6 +165,8 @@ class LoanLifecycleService
             if (!$tool) {
                 throw (new ModelNotFoundException()->setModel(Tool::class, [$reservation->tool_id]));
             }
+
+            $reservation->refresh();
 
             // Authorization: Lender only
             if ($tool->owner_id !== $userId) {

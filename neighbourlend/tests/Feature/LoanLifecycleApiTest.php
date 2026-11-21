@@ -252,7 +252,7 @@ class LoanLifecycleApiTest extends TestCase
 
         $this->patchJson("/api/loan/{$id}/inspect", ['returned_condition' => 'GOOD'])
             ->assertStatus(409)
-            ->assertJsonPath('message', 'Only returned reservations can be inspected.');
+            ->assertJsonPath('message', 'Only returned reservations awaiting inspection can be inspected.');
 
         $this->assertDatabaseHas('reservations', [
             'id' => $id,
@@ -392,4 +392,43 @@ class LoanLifecycleApiTest extends TestCase
             ->assertNotFound();
         $this->patchJson('/api/loan/999999/close')->assertNotFound();
     }
+
+
+    public function test_lender_cannot_inspect_same_return_twice(): void
+    {
+        $lender = User::factory()->create();
+        $borrower = User::factory()->create();
+        $tool = $this->makeTool($lender);
+
+        $id = $this->createReservation($tool, $borrower);
+
+        $this->moveToReturned($id, $lender, $borrower);
+
+        Sanctum::actingAs($lender);
+
+        $this->patchJson("/api/loan/{$id}/inspect", [
+            'returned_condition' => 'GOOD',
+        ])->assertOk();
+
+        $this->patchJson("/api/loan/{$id}/inspect", [
+            'returned_condition' => 'DAMAGED',
+        ])
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'Only returned reservations awaiting inspection can be inspected.'
+            );
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $id,
+            'status' => ReservationState::RETURNED->value,
+            'returned_condition' => 'GOOD',
+        ]);
+
+        $this->assertSame(
+            ToolStatus::INSPECTION,
+            $tool->fresh()->availability_status
+        );
+    }
+
 }

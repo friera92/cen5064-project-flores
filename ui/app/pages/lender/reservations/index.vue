@@ -24,13 +24,16 @@ const statuses: Array<{ label: string; value: string }> = [
   { label: 'Active', value: 'ACTIVE' },
   { label: 'Returned', value: 'RETURNED' },
   { label: 'Closed', value: 'CLOSED' },
-  { label: 'Disputed', value: 'DISPUTED' },
   { label: 'Canceled', value: 'CANCELED' },
 ]
 
-const filteredReservations = computed(() => selectedStatus.value === 'ALL'
-  ? reservations.value
-  : reservations.value.filter(item => item.status === selectedStatus.value))
+// Disputes have their own global navigation page for both lenders and borrowers.
+const filteredReservations = computed(() => {
+  const incoming = reservations.value.filter(item => item.status !== 'DISPUTED')
+  return selectedStatus.value === 'ALL'
+    ? incoming
+    : incoming.filter(item => item.status === selectedStatus.value)
+})
 
 const pendingCount = computed(() => reservations.value.filter(item => item.status === 'REQUESTED').length)
 
@@ -161,7 +164,8 @@ onMounted(loadReservations)
         </NuxtLink>
       </div>
 
-      <div class="mt-8 flex flex-wrap items-end gap-3">
+
+      <div class="mt-5 flex flex-wrap items-end gap-3">
         <label class="flex min-w-48 flex-col gap-2 text-sm font-medium text-[#172B25]">
           Filter by status
           <select v-model="selectedStatus" class="rounded-xl border border-[#E5E9E4] bg-white px-4 py-3">
@@ -178,7 +182,7 @@ onMounted(loadReservations)
       <p v-if="loading" role="status" class="mt-6 rounded-2xl border bg-white p-10 text-center text-[#66736D]">Loading incoming reservations...</p>
       <div v-else-if="!filteredReservations.length" class="mt-6 rounded-2xl border border-[#E5E9E4] bg-white px-6 py-14 text-center">
         <h2 class="text-xl font-semibold text-[#172B25]">No reservations found</h2>
-        <p class="mt-2 text-[#66736D]">{{ selectedStatus === 'ALL' ? 'No one has requested your equipment yet.' : 'There are no reservations with this status.' }}</p>
+        <p class="mt-2 text-[#66736D]">{{ selectedStatus === 'ALL' ? 'No incoming reservations are currently available.' : 'There are no reservations with this status.' }}</p>
         <button v-if="selectedStatus !== 'ALL'" type="button" class="mt-4 rounded-xl border px-4 py-2" @click="selectedStatus = 'ALL'">Show all</button>
       </div>
 
@@ -220,7 +224,8 @@ onMounted(loadReservations)
                     <button v-if="item.status === 'REQUESTED'" type="button" :disabled="pendingId !== null" class="rounded-lg border border-red-200 px-3 py-2 font-medium text-red-700 disabled:opacity-50" @click="openCancelModal(item)">Cancel</button>
                     <button v-if="item.status === 'APPROVED'" type="button" :disabled="pendingId !== null" class="rounded-lg bg-[#176B52] px-3 py-2 font-medium text-white disabled:opacity-50" @click="performAction(item, 'handoff')">Confirm handoff</button>
                     <span v-if="item.status === 'ACTIVE'" class="self-center text-xs text-[#66736D]">Awaiting borrower return</span>
-                    <span v-if="item.status === 'RETURNED'" class="self-center text-xs text-[#66736D]">Inspection in next phase</span>
+                    <NuxtLink v-if="item.status === 'RETURNED' && !item.returned_condition" :to="`/lender/reservations/${item.id}`" class="self-center text-xs font-semibold text-[#176B52]">Inspect return</NuxtLink>
+                    <NuxtLink v-if="item.status === 'RETURNED' && item.returned_condition === 'GOOD'" :to="`/lender/reservations/${item.id}`" class="self-center text-xs font-semibold text-[#176B52]">Review and close</NuxtLink>
                     <span v-if="item.status === 'DISPUTED'" class="self-center text-xs text-red-700">Pending resolution</span>
                   </div>
                 </td>
