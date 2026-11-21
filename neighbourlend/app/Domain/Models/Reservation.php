@@ -19,7 +19,10 @@ class Reservation extends Model
         'end_date',
         'status',
         'total_cost',
-        'returned_condition'
+        'returned_condition',
+        'cancellation_reason',
+        'canceled_by_user_id',
+        'canceled_at'
     ];
 
     public function casts(): array
@@ -30,6 +33,7 @@ class Reservation extends Model
             'status' => ReservationState::class,
             'returned_condition' => ToolReturnedCondition::class,
             'total_cost' => 'decimal:2',
+            'canceled_at' => 'datetime',
         ];
     }
 

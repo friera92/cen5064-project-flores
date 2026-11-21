@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import type { ReservationQuote } from '~/types/reservation'
 import type { Tool } from '~/types/tool'
+import { getReservationErrorMessage } from '~/utils/getReservationErrorMessage'
 
 definePageMeta({
   middleware: 'auth'
@@ -152,18 +153,7 @@ async function handleReservation() {
     await navigateTo('/reservations')
   } catch (error: any) {
     console.error(error)
-
-    if (error?.status === 422) {
-      reservationError.value =
-        'Please check the selected reservation dates.'
-    } else if (error?.status === 409) {
-      reservationError.value =
-        'This tool is no longer available for the selected dates.'
-    } else {
-      reservationError.value =
-        error?.data?.message ??
-        'Unable to create the reservation. Please try again.'
-    }
+	reservationError.value = getReservationErrorMessage(error)
   } finally {
     reservationLoading.value = false
   }

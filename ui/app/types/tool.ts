@@ -1,5 +1,5 @@
 export type ToolCondition = 'CREATED' | 'NEW' | 'GOOD' | 'FAIR' | 'POOR'
-export type ToolStatus = 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'RETIRED'
+export type ToolStatus = 'AVAILABLE' | 'IN_USE' | 'INSPECTION' | 'MAINTENANCE' | 'RETIRED'
 
 export interface Category {
   id: number

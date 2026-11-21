@@ -4,11 +4,15 @@ import type {
   ReservationStatus
 } from '~/types/reservation'
 
+import CancelReservationModal from '~/components/reservations/CancelReservationModal.vue'
+import { getReservationErrorMessage } from '~/utils/getReservationErrorMessage'
+
 definePageMeta({
   middleware: 'auth'
 })
 
 const route = useRoute()
+const { user } = useAuth()
 
 const {
   getReservation,
@@ -19,6 +23,7 @@ const reservation = ref<Reservation | null>(null)
 
 const loading = ref(true)
 const canceling = ref(false)
+const cancelModalOpen = ref(false)
 
 const errorMessage = ref('')
 const cancelError = ref('')
@@ -29,8 +34,10 @@ const reservationId = computed(() =>
 )
 
 const canCancel = computed(() =>
-  reservation.value?.status === 'REQUESTED' ||
-  reservation.value?.status === 'APPROVED'
+  reservation.value?.borrower_id === user.value?.id && (
+    reservation.value?.status === 'REQUESTED' ||
+    reservation.value?.status === 'APPROVED'
+  )
 )
 
 function statusClass(status: ReservationStatus): string {
@@ -85,52 +92,39 @@ async function loadReservation() {
     reservation.value = response.data
   } catch (error: any) {
     console.error(error)
-
-    if (error?.status === 403) {
-      errorMessage.value =
-        'You are not authorized to view this reservation.'
-    } else if (error?.status === 404) {
-      errorMessage.value =
-        'Reservation not found.'
-    } else {
-      errorMessage.value =
-        'Unable to load the reservation. Please try again.'
-    }
+    errorMessage.value = getReservationErrorMessage(error)
   } finally {
     loading.value = false
   }
 }
 
-async function handleCancel() {
-  if (!reservation.value || !canCancel.value) {
-    return
-  }
+function openCancellationModal(): void {
+  if (!reservation.value || !canCancel.value) return
+  cancelError.value = ''
+  cancelModalOpen.value = true
+}
 
-  const confirmed = window.confirm(
-    'Are you sure you want to cancel this reservation?'
-  )
+function closeCancellationModal(): void {
+  if (canceling.value) return
+  cancelModalOpen.value = false
+  cancelError.value = ''
+}
 
-  if (!confirmed) {
-    return
-  }
-
+async function handleCancel(reason: string | null): Promise<void> {
+  if (!reservation.value || !canCancel.value || canceling.value) return
   cancelError.value = ''
   successMessage.value = ''
   canceling.value = true
 
   try {
-    const response = await cancelReservation(
-      reservation.value.id
-    )
-
+    const response = await cancelReservation(reservation.value.id, reason)
+    cancelModalOpen.value = false
     reservation.value = response.data
     successMessage.value = response.message
+    await loadReservation()
   } catch (error: any) {
-    console.error(error)
-
-    cancelError.value =
-      error?.data?.message ??
-      'Unable to cancel the reservation. Please try again.'
+    cancelError.value = getReservationErrorMessage(error)
+    await loadReservation()
   } finally {
     canceling.value = false
   }
@@ -144,6 +138,14 @@ onMounted(() => {
 <template>
   <div class="min-h-screen bg-[#FAF9F6]">
     <AppHeader />
+    <CancelReservationModal
+      :open="cancelModalOpen"
+      :reason-required="false"
+      :submitting="canceling"
+      :error="cancelError"
+      @close="closeCancellationModal"
+      @confirm="handleCancel"
+    />
 
     <UContainer class="py-10 md:py-14">
       <div class="mb-6">
@@ -325,6 +327,12 @@ onMounted(() => {
             {{ cancelError }}
           </div>
 
+          <section v-if="reservation.status === 'CANCELED'" class="mt-7 rounded-xl border border-[#E5E9E4] bg-[#FAF9F6] p-5">
+            <h2 class="font-semibold text-[#172B25]">Cancellation details</h2>
+            <p class="mt-2 text-sm text-[#66736D]">Canceled by {{ reservation.canceled_by_user_id == null ? 'unknown party' : reservation.canceled_by_user_id === reservation.borrower_id ? 'borrower' : 'lender' }}.</p>
+            <p class="mt-2 whitespace-pre-wrap text-sm text-[#172B25]">{{ reservation.cancellation_reason || 'No reason was provided.' }}</p>
+          </section>
+
           <div
             class="mt-8 flex flex-wrap gap-3
                    border-t border-[#E5E9E4] pt-6"
@@ -345,7 +353,7 @@ onMounted(() => {
               variant="outline"
               :loading="canceling"
               :disabled="canceling"
-              @click="handleCancel"
+              @click="openCancellationModal"
             />
           </div>
         </div>

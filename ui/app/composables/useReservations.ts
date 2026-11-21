@@ -4,6 +4,13 @@ import type {
   ReservationQuote,
 } from "~/types/reservation";
 
+import type { LenderReservation } from '~/types/lender-reservation'
+
+interface ReservationMutationResponse {
+  message: string
+  data: Reservation
+}
+
 export function useReservations() {
   const { request } = useApi();
 
@@ -32,13 +39,32 @@ export function useReservations() {
     return request<{ data: Reservation }>(`/api/reservation/${id}`);
   }
 
-  function cancelReservation(id: number) {
-    return request<{
-      message: string;
-      data: Reservation;
-    }>(`/api/reservation/${id}/cancel`, {
+  // Laravel scopes this list to tools owned by the authenticated lender.
+  function getReceivedReservations() {
+    return request<{ data: LenderReservation[] }>('/api/reservation/received')
+  }
+
+  function getLenderReservation(id: number) {
+    return request<{ data: LenderReservation }>('/api/reservation/' + id)
+  }
+
+  function approveReservation(id: number) {
+    return request<ReservationMutationResponse>('/api/reservation/' + id + '/approve', {
+      method: 'PATCH',
+    })
+  }
+
+  function cancelReservation(id: number, reason: string | null = null) {
+    return request<ReservationMutationResponse>(`/api/reservation/${id}/cancel`, {
       method: "PATCH",
+      body: { cancellation_reason: reason?.trim() || null },
     });
+  }
+
+  function handOffReservation(id: number) {
+    return request<ReservationMutationResponse>('/api/loan/' + id + '/handoff', {
+      method: 'PATCH',
+    })
   }
 
   return {
@@ -46,6 +72,10 @@ export function useReservations() {
     createReservation,
     getReservations,
     getReservation,
+    getReceivedReservations,
+    getLenderReservation,
+    approveReservation,
+    handOffReservation,
     cancelReservation,
   };
 }

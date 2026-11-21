@@ -24,7 +24,11 @@ class ReservationController extends Controller
 
         $data['borrower_id'] = $request->user()->id;
 
-        $reservation = $this->reservationService->requestTool($data);
+        try {
+            $reservation = $this->reservationService->requestTool($data);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
 
         return response()->json([
             'message' => 'Reservation requested successfully.',
@@ -90,10 +94,19 @@ class ReservationController extends Controller
 
     public function cancel(Request $request, int $reservation): JsonResponse
     {
-        $item = $this->reservationService->cancelReservation(
-            $reservation,
-            $request->user()->id
-        );
+        $validated = $request->validate([
+            'cancellation_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $item = $this->reservationService->cancelReservation(
+                $reservation,
+                $request->user()->id,
+                $validated['cancellation_reason'] ?? null
+            );
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
 
         return response()->json([
             'message' => 'Reservation canceled successfully.',
