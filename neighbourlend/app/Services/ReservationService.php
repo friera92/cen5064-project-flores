@@ -6,12 +6,14 @@ use App\Domain\States\ToolStatus;
 use App\Domain\States\ReservationState;
 use App\Domain\Models\Reservation;
 use App\Domain\Models\Tool;
+use App\Domain\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Repositories\Interfaces\ReservationRepositoryInterface;
 use App\Repositories\Interfaces\ToolRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Gate;
 use Exception;
 use InvalidArgumentException;
 
@@ -27,21 +29,26 @@ class ReservationService
         return DB::transaction(function () use ($data) {
             // Create a new reservation
             if (!isset($data['tool_id'])) {
-                throw new Exception('Tool ID is required to create a reservation.');
+                throw new DomainException('Tool ID is required to create a reservation.');
             }
 
             $tool = $this->toolRepository->findByIdWithLock($data['tool_id']);
             if (!$tool) {
-                throw new Exception('Tool not found.');
+                throw (new ModelNotFoundException())->setModel(Tool::class, [$data['tool_id']]);
             }
 
+            // Enforce the reservation authorization policy.
+            $borrower = User::findOrFail($data['borrower_id']);
+
+            Gate::forUser($borrower)->authorize('reserve', $tool);
+
             if ($tool->availability_status !== ToolStatus::AVAILABLE) {
-                throw new Exception('Tool is not available for reservation.');
+                throw new DomainException('Tool is not available for reservation.');
             }
 
             // 3. Chronological Sanity Check
             if ($data['start_date'] > $data['end_date']) {
-                throw new Exception('End date must be on or after the start date');
+                throw new DomainException('End date must be on or after the start date');
             }
 
             // 4. Overlap Conflict Resolution (Anti-Double Booking)
@@ -52,7 +59,7 @@ class ReservationService
             );
 
             if ($hasConflict) {
-                throw new Exception('The tool is already booked or requested for the selected dates.');
+                throw new DomainException('The tool is already booked or requested for the selected dates.');
             }
 
             $cost = $this->calculateCost(
@@ -102,29 +109,33 @@ class ReservationService
         });
     }
 
-    public function cancelReservation(int $reservationId, int $userId)
+    public function cancelReservation(int $reservationId, int $userId, ?string $reason = null)
     {
-        return DB::transaction(function () use ($reservationId, $userId) {
+        return DB::transaction(function () use ($reservationId, $userId, $reason) {
             $reservation = $this->reservationRepository->findById($reservationId);
             if (!$reservation) {
-                throw new Exception('Reservation not found.');
+                throw (new ModelNotFoundException())->setModel(Reservation::class, [$reservationId]);
             }
 
             $isBorrower = $reservation->borrower_id === $userId;
             $isLender = $reservation->tool && $reservation->tool->owner_id === $userId;
 
             if (!$isBorrower && !$isLender) {
-                throw new Exception('You are not authorized to cancel this reservation.');
+                throw new AuthorizationException('You are not authorized to cancel this reservation.');
             }
 
             if ($reservation->status === ReservationState::APPROVED && !$isBorrower) {
-                throw new Exception(
+                throw new AuthorizationException(
                     'Only the borrower can cancel an approved reservation.'
                 );
             }
 
             // Verify state transition & Update the reservation status to CANCELED
             $reservation->transitionTo(ReservationState::CANCELED);
+
+            $reservation->cancellation_reason = $reason;
+            $reservation->canceled_by_user_id = $userId;
+            $reservation->canceled_at = now();
 
             $result = $this->reservationRepository->save($reservation);
 

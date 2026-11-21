@@ -294,4 +294,19 @@ class ReservationApiFlowTest extends TestCase
             'status' => ReservationState::CANCELED->value,
         ]);
     }
+
+    public function test_owner_cannot_reserve_own_tool(): void
+    {
+        $owner = User::factory()->create();
+        $tool = $this->makeTool($owner);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson(
+            '/api/reservation/new',
+            $this->payload($tool)
+        )->assertForbidden();
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
 }

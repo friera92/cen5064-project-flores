@@ -6,6 +6,25 @@ const { getTool } = useTools()
 const tool = ref<Tool | null>(null)
 const loading = ref(true)
 const error = ref('')
+
+const { user, isAuthenticated } = useAuth()
+
+const isOwner = computed(() =>
+  Boolean(
+    tool.value &&
+    user.value &&
+    Number(tool.value.owner_id) === Number(user.value.id)
+  )
+)
+
+const canRequestReservation = computed(() =>
+  tool.value?.availability_status === 'AVAILABLE' &&
+  (
+    !isAuthenticated.value ||
+    (user.value !== null && !isOwner.value)
+  )
+)
+
 onMounted(async () => {
   try { tool.value = await getTool(Number(route.params.id)); console.log('Tool data:', tool.value); }
   catch (e: any) { error.value = e?.data?.message || 'Equipment not found.' }
@@ -29,8 +48,38 @@ onMounted(async () => {
           <p class="mt-4 text-[#66736D]">{{ tool.description }}</p>
           <p class="mt-5 text-lg font-semibold text-[#176B52]">${{ Number(tool.daily_rate).toFixed(2) }}/day</p>
           <p class="mt-4 text-sm">Condition: {{ tool.condition }} · Status: {{ tool.availability_status }}</p>
-          <NuxtLink v-if="tool.availability_status === 'AVAILABLE'" :to="`/reservations/new?tool=${tool.id}`" class="mt-6 inline-flex rounded-xl bg-[#176B52] px-5 py-3 font-semibold text-white">Request Reservation</NuxtLink>
-          <p v-else class="mt-6 text-sm text-[#66736D]">This equipment is currently unavailable for new reservations.</p>
+          
+          <NuxtLink
+            v-if="canRequestReservation"
+            :to="`/reservations/new?tool=${tool.id}`"
+            class="mt-6 inline-flex rounded-xl bg-[#176B52]
+                  px-5 py-3 font-semibold text-white"
+          >
+            Request Reservation
+          </NuxtLink>
+
+          <div v-else-if="isOwner" class="mt-6">
+            <p class="text-sm text-[#66736D]">
+              This equipment belongs to you.
+            </p>
+
+            <NuxtLink
+              :to="`/my-equipment/${tool.id}/edit`"
+              class="mt-4 inline-flex rounded-xl border
+                    border-[#176B52] px-5 py-3
+                    font-semibold text-[#176B52]"
+            >
+              Manage Equipment
+            </NuxtLink>
+          </div>
+
+          <p
+            v-else-if="tool.availability_status !== 'AVAILABLE'"
+            class="mt-6 text-sm text-[#66736D]"
+          >
+            This equipment is currently unavailable
+            for new reservations.
+          </p>
         </div>
       </article>
     </UContainer>
