@@ -120,6 +120,10 @@ class ReservationService
             $isBorrower = $reservation->borrower_id === $userId;
             $isLender = $reservation->tool && $reservation->tool->owner_id === $userId;
 
+            if (!$reason && $isLender) {
+                throw new InvalidArgumentException('Cancellation reason is required.');
+            }
+
             if (!$isBorrower && !$isLender) {
                 throw new AuthorizationException('You are not authorized to cancel this reservation.');
             }
