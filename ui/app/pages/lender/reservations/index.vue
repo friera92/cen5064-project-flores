@@ -220,7 +220,8 @@ onMounted(loadReservations)
                     <button v-if="item.status === 'REQUESTED'" type="button" :disabled="pendingId !== null" class="rounded-lg border border-red-200 px-3 py-2 font-medium text-red-700 disabled:opacity-50" @click="openCancelModal(item)">Cancel</button>
                     <button v-if="item.status === 'APPROVED'" type="button" :disabled="pendingId !== null" class="rounded-lg bg-[#176B52] px-3 py-2 font-medium text-white disabled:opacity-50" @click="performAction(item, 'handoff')">Confirm handoff</button>
                     <span v-if="item.status === 'ACTIVE'" class="self-center text-xs text-[#66736D]">Awaiting borrower return</span>
-                    <span v-if="item.status === 'RETURNED'" class="self-center text-xs text-[#66736D]">Inspection in next phase</span>
+                    <NuxtLink v-if="item.status === 'RETURNED' && !item.returned_condition" :to="`/lender/reservations/${item.id}`" class="self-center text-xs font-semibold text-[#176B52]">Inspect return</NuxtLink>
+                    <NuxtLink v-if="item.status === 'RETURNED' && item.returned_condition === 'GOOD'" :to="`/lender/reservations/${item.id}`" class="self-center text-xs font-semibold text-[#176B52]">Review and close</NuxtLink>
                     <span v-if="item.status === 'DISPUTED'" class="self-center text-xs text-red-700">Pending resolution</span>
                   </div>
                 </td>

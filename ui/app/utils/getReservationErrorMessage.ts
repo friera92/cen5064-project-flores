@@ -21,6 +21,7 @@ export function getReservationErrorMessage(
 
     case 422: {
       const validationMessage =
+        error?.data?.errors?.returned_condition?.[0] ??
         error?.data?.errors?.cancellation_reason?.[0]
 
       return typeof validationMessage === 'string'

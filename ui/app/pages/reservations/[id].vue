@@ -16,13 +16,15 @@ const { user } = useAuth()
 
 const {
   getReservation,
-  cancelReservation
+  cancelReservation,
+  returnReservation
 } = useReservations()
 
 const reservation = ref<Reservation | null>(null)
 
 const loading = ref(true)
 const canceling = ref(false)
+const returning = ref(false)
 const cancelModalOpen = ref(false)
 
 const errorMessage = ref('')
@@ -33,11 +35,19 @@ const reservationId = computed(() =>
   Number(route.params.id)
 )
 
+const isBorrower = computed(() =>
+  user.value !== null && reservation.value?.borrower_id === user.value.id
+)
+
 const canCancel = computed(() =>
-  reservation.value?.borrower_id === user.value?.id && (
+  isBorrower.value && (
     reservation.value?.status === 'REQUESTED' ||
     reservation.value?.status === 'APPROVED'
   )
+)
+
+const canReturn = computed(() =>
+  isBorrower.value && reservation.value?.status === 'ACTIVE'
 )
 
 function statusClass(status: ReservationStatus): string {
@@ -130,6 +140,26 @@ async function handleCancel(reason: string | null): Promise<void> {
   }
 }
 
+async function handleReturn(): Promise<void> {
+  if (!reservation.value || !canReturn.value || returning.value || canceling.value) return
+  if (!window.confirm('Confirm the tool has been physically returned to the lender?')) return
+
+  returning.value = true
+  cancelError.value = ''
+  successMessage.value = ''
+  try {
+    const result = await returnReservation(reservation.value.id)
+    await loadReservation()
+    successMessage.value = result.message
+  } catch (error: any) {
+    const message = getReservationErrorMessage(error)
+    await loadReservation()
+    cancelError.value = message
+  } finally {
+    returning.value = false
+  }
+}
+
 onMounted(() => {
   loadReservation()
 })
@@ -206,11 +236,15 @@ onMounted(() => {
                    md:flex-row md:items-start"
           >
             <img
+              v-if="reservation.tool?.picture_url"
               :src="reservation.tool.picture_url"
               :alt="reservation.tool.title"
               class="h-56 w-full rounded-xl object-cover
                      md:h-52 md:w-64 md:shrink-0"
             >
+            <div v-else class="flex h-56 w-full items-center justify-center rounded-xl bg-[#E9F4ED] text-[#176B52] md:h-52 md:w-64 md:shrink-0">
+              No image available
+            </div>
 
             <div class="min-w-0 flex-1">
               <div
@@ -333,6 +367,17 @@ onMounted(() => {
             <p class="mt-2 whitespace-pre-wrap text-sm text-[#172B25]">{{ reservation.cancellation_reason || 'No reason was provided.' }}</p>
           </section>
 
+          <section v-if="reservation.returned_condition" class="mt-7 rounded-xl border border-[#E5E9E4] bg-[#FAF9F6] p-5">
+            <h2 class="font-semibold text-[#172B25]">Inspection result</h2>
+            <p class="mt-2 text-sm text-[#66736D]">Returned condition: {{ reservation.returned_condition }}</p>
+          </section>
+          <p v-if="reservation.status === 'RETURNED'" class="mt-6 text-sm text-[#66736D]" role="status">
+            The lender has been notified of the return. Awaiting inspection and closure.
+          </p>
+          <p v-if="reservation.status === 'DISPUTED'" class="mt-6 text-sm text-red-700" role="status">
+            The lender reported an issue with the returned equipment. This reservation requires follow-up.
+          </p>
+
           <div
             class="mt-8 flex flex-wrap gap-3
                    border-t border-[#E5E9E4] pt-6"
@@ -352,8 +397,17 @@ onMounted(() => {
               color="error"
               variant="outline"
               :loading="canceling"
-              :disabled="canceling"
+              :disabled="canceling || returning"
               @click="openCancellationModal"
+            />
+            <UButton
+              v-if="canReturn"
+              label="Mark as Returned"
+              icon="i-lucide-package-check"
+              class="bg-[#176B52] text-white hover:bg-[#124D3D]"
+              :loading="returning"
+              :disabled="returning || canceling"
+              @click="handleReturn"
             />
           </div>
         </div>

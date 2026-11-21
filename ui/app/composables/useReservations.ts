@@ -5,6 +5,7 @@ import type {
 } from "~/types/reservation";
 
 import type { LenderReservation } from '~/types/lender-reservation'
+import type { ReturnedCondition } from '~/types/reservation'
 
 interface ReservationMutationResponse {
   message: string
@@ -67,6 +68,25 @@ export function useReservations() {
     })
   }
 
+  function returnReservation(id: number) {
+    return request<ReservationMutationResponse>(`/api/loan/${id}/return`, {
+      method: 'PATCH',
+    })
+  }
+
+  function inspectReservation(id: number, returnedCondition: ReturnedCondition) {
+    return request<ReservationMutationResponse>(`/api/loan/${id}/inspect`, {
+      method: 'PATCH',
+      body: { returned_condition: returnedCondition },
+    })
+  }
+
+  function closeReservation(id: number) {
+    return request<ReservationMutationResponse>(`/api/loan/${id}/close`, {
+      method: 'PATCH',
+    })
+  }
+
   return {
     getQuote,
     createReservation,
@@ -76,6 +96,9 @@ export function useReservations() {
     getLenderReservation,
     approveReservation,
     handOffReservation,
+    returnReservation,
+    inspectReservation,
+    closeReservation,
     cancelReservation,
   };
 }
