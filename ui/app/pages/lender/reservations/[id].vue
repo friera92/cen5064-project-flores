@@ -18,6 +18,7 @@ const successMessage = ref('')
 const cancelModalOpen = ref(false)
 const cancellationError = ref('')
 const inspectionCondition = ref<ReturnedCondition>('GOOD')
+const inspectionNotes = ref('')
 
 const reservationId = computed(() => Number(route.params.id))
 const isOwner = computed(() => user.value !== null && reservation.value?.tool?.owner_id === user.value.id)
@@ -133,7 +134,7 @@ async function submitInspection(): Promise<void> {
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    const result = await inspectReservation(reservation.value.id, condition)
+    const result = await inspectReservation(reservation.value.id, condition, inspectionNotes.value)
     await loadReservation()
     successMessage.value = result.message
   } catch (error: any) {
@@ -211,6 +212,10 @@ onMounted(loadReservation)
           </dl>
         </div>
 
+        <section v-if="reservation.returned_condition" class="mt-7 rounded-xl border border-[#E5E9E4] bg-[#FAF9F6] p-5">
+          <h2 class="font-semibold text-[#172B25]">Inspection notes</h2>
+          <p class="mt-2 whitespace-pre-wrap text-sm text-[#172B25]">{{ reservation.inspection_notes || 'No notes were provided.' }}</p>
+        </section>
         <section v-if="reservation.status === 'CANCELED'" class="mt-7 rounded-xl border border-[#E5E9E4] bg-[#FAF9F6] p-5">
           <h2 class="font-semibold text-[#172B25]">Cancellation details</h2>
           <p class="mt-2 text-sm text-[#66736D]">Canceled by {{ reservation.canceled_by_user_id == null ? 'unknown party' : reservation.canceled_by_user_id === reservation.borrower_id ? 'borrower' : 'lender' }}.</p>
@@ -219,7 +224,7 @@ onMounted(loadReservation)
         <section v-if="canInspect" class="mt-8 rounded-xl border border-[#E5E9E4] bg-[#FAF9F6] p-5">
           <h2 class="text-lg font-semibold text-[#172B25]">Inspect returned equipment</h2>
           <p class="mt-2 text-sm text-[#66736D]">Confirm the condition after physically inspecting the item. Damage or missing parts will open a dispute.</p>
-          <form class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end" @submit.prevent="submitInspection">
+          <form class="mt-4 flex flex-col gap-4" @submit.prevent="submitInspection">
             <label class="flex-1 text-sm font-semibold text-[#172B25]" for="returned-condition">
               Returned condition
               <select id="returned-condition" v-model="inspectionCondition" required :disabled="submitting" class="mt-2 block w-full rounded-xl border border-[#E5E9E4] bg-white px-4 py-3 font-normal">
@@ -229,7 +234,10 @@ onMounted(loadReservation)
                 <option value="MISSING_PARTS">Missing parts</option>
               </select>
             </label>
-            <button type="submit" :disabled="submitting" class="rounded-xl bg-[#176B52] px-5 py-3 font-semibold text-white disabled:opacity-50">
+            <label for="inspection-notes" class="text-sm font-semibold text-[#172B25]">Inspection notes (optional)
+              <textarea id="inspection-notes" v-model="inspectionNotes" rows="4" maxlength="2000" :disabled="submitting" placeholder="Record observations about the returned equipment" class="mt-2 block w-full rounded-xl border border-[#E5E9E4] bg-white px-4 py-3 font-normal" />
+            </label>
+            <button type="submit" :disabled="submitting" class="self-start rounded-xl bg-[#176B52] px-5 py-3 font-semibold text-white disabled:opacity-50">
               {{ submitting ? 'Submitting...' : 'Submit inspection' }}
             </button>
           </form>

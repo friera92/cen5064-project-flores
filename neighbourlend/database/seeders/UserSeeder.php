@@ -15,17 +15,24 @@ class UserSeeder extends Seeder
     {
         $password = Hash::make('Password123!');
 
-        // 1. Platform Admin
-        User::updateOrCreate(
-            ['email' => 'admin@equipmentshare.local'],
-            [
-                'name'      => 'System Administrator',
-                'password'  => $password,
-                'is_admin'  => true,
-                'phone'     => '+15550001',
-                'address'   => '100 Admin Plaza, Miami, FL',
-            ]
-        );
+        // 1. Demo admin: never create a second admin or reset an existing admin's password.
+        // Include soft-deleted records to preserve the one-admin seed invariant.
+        $existingAdmin = User::withTrashed()->where('is_admin', true)->first();
+        if ($existingAdmin) {
+            $this->command?->info('An administrator already exists. Demo admin creation skipped.');
+        } elseif (User::withTrashed()->where('email', 'admin@equipmentshare.local')->exists()) {
+            // Do not automatically promote an existing regular account.
+            $this->command?->warn('Demo admin email is already taken. No admin was created.');
+        } else {
+            User::create([
+                'email'    => 'admin@equipmentshare.local',
+                'name'     => 'System Administrator',
+                'password' => $password,
+                'is_admin' => true,
+                'phone'    => '+15550001',
+                'address'  => '100 Admin Plaza, Miami, FL',
+            ]);
+        }
 
         // 2. Lender 1
         User::updateOrCreate(

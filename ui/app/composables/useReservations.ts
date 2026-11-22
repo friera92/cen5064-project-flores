@@ -74,10 +74,10 @@ export function useReservations() {
     })
   }
 
-  function inspectReservation(id: number, returnedCondition: ReturnedCondition) {
+  function inspectReservation(id: number, returnedCondition: ReturnedCondition, inspectionNotes: string | null = null) {
     return request<ReservationMutationResponse>(`/api/loan/${id}/inspect`, {
       method: 'PATCH',
-      body: { returned_condition: returnedCondition },
+      body: { returned_condition: returnedCondition, inspection_notes: inspectionNotes?.trim() || null },
     })
   }
 

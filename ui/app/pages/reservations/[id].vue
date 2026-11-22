@@ -411,6 +411,8 @@ onMounted(() => {
           <section v-if="reservation.returned_condition" class="mt-7 rounded-xl border border-[#E5E9E4] bg-[#FAF9F6] p-5">
             <h2 class="font-semibold text-[#172B25]">Inspection result</h2>
             <p class="mt-2 text-sm text-[#66736D]">Returned condition: {{ reservation.returned_condition }}</p>
+            <h3 class="mt-4 text-sm font-semibold text-[#172B25]">Inspection notes</h3>
+            <p class="mt-2 whitespace-pre-wrap text-sm text-[#66736D]">{{ reservation.inspection_notes || 'No notes were provided.' }}</p>
           </section>
           <p v-if="reservation.status === 'RETURNED'" class="mt-6 text-sm text-[#66736D]" role="status">
             The lender has been notified of the return. Awaiting inspection and closure.

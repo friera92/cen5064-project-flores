@@ -24,6 +24,7 @@ export interface Reservation {
   total_cost: number | string
   status: ReservationStatus
   returned_condition: ReturnedCondition | null
+  inspection_notes: string | null
   borrower_id?: number
   cancellation_reason?: string | null
   canceled_by_user_id?: number | null

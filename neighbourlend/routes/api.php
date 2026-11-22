@@ -7,6 +7,8 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ToolController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\AdminCategoryController;
+use App\Http\Controllers\AdminDisputeController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -55,6 +57,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/{reservation}/return', [\App\Http\Controllers\LoanLifecycleController::class, 'return'])->whereNumber('reservation');
         Route::patch('/{reservation}/inspect', [\App\Http\Controllers\LoanLifecycleController::class, 'inspect'])->whereNumber('reservation');
         Route::patch('/{reservation}/close', [\App\Http\Controllers\LoanLifecycleController::class, 'close'])->whereNumber('reservation');
+    });
+
+    // Backend enforcement is mandatory; hiding UI links is not authorization.
+    Route::middleware('can:admin-access')->prefix('/admin')->group(function () {
+        Route::get('/categories', [AdminCategoryController::class, 'index']);
+        Route::post('/categories', [AdminCategoryController::class, 'store']);
+        Route::get('/categories/{category}', [AdminCategoryController::class, 'show'])->whereNumber('category');
+        Route::patch('/categories/{category}', [AdminCategoryController::class, 'update'])->whereNumber('category');
+        Route::delete('/categories/{category}', [AdminCategoryController::class, 'destroy'])->whereNumber('category');
+        Route::get('/disputes', [AdminDisputeController::class, 'index']);
     });
 });
 

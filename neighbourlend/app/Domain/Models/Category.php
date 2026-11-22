@@ -9,7 +9,7 @@ class Category extends Model
 {
     protected $fillable = [
         'name',
-        'desription'
+        'description'
     ];
 
     public function tools(): HasMany

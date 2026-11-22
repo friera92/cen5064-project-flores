@@ -53,13 +53,15 @@ class LoanLifecycleController extends Controller
                     'required',
                     Rule::enum(ToolReturnedCondition::class),
                 ],
+                'inspection_notes' => ['nullable', 'string', 'max:2000'],
             ]);
 
             $userId = $request->user()->id;
             $reservation = $this->loanLifecycleService->inspectTool(
                 $reservationId,
                 $data['returned_condition'],
-                $userId
+                $userId,
+                $data['inspection_notes'] ?? null
             );
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 409);

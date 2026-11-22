@@ -28,5 +28,17 @@ class CategorySeeder extends Seeder
                 ]
             );
         }
+
+        // PostgreSQL does not advance the identity sequence for explicit IDs.
+        // Keep generated IDs above all seeded and user-created categories.
+        if (DB::getDriverName() === 'pgsql') {
+            DB::selectOne(<<<'SQL'
+                SELECT setval(
+                    pg_get_serial_sequence('categories', 'id'),
+                    COALESCE((SELECT MAX(id) FROM categories), 1),
+                    EXISTS (SELECT 1 FROM categories)
+                )
+                SQL);
+        }
     }
 }

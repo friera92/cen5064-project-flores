@@ -44,6 +44,12 @@ class ToolController extends Controller
 
     public function store(ToolRequest $request): JsonResponse
     {
+        abort_if(
+            $request->user()->isAdmin(),
+            403,
+            'Administrators cannot list equipment.'
+        );
+
         $data = $request->validated();
         $data['owner_id'] = $request->user()->id;
 
