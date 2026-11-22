@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Prepare isolated CI environment
         shell: bash
@@ -31,6 +31,21 @@ jobs:
           chmod 600 .env
           cp neighbourlend/.env.example neighbourlend/.env
 
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          sed -i "s|^APP_KEY=.*|APP_KEY=$APP_KEY|" neighbourlend/.env
+
+          # Ensure Laravel's HTTP server and Artisan commands
+          # use the same isolated PostgreSQL database.
+
+          sed -i \
+            -e 's/^DB_CONNECTION=.*/DB_CONNECTION=pgsql/' \
+            -e 's/^DB_HOST=.*/DB_HOST=db/' \
+            -e 's/^DB_PORT=.*/DB_PORT=5432/' \
+            -e 's/^DB_DATABASE=.*/DB_DATABASE=neighbourlend_ci/' \
+            -e 's/^DB_USERNAME=.*/DB_USERNAME=neighbourlend_ci/' \
+            -e "s/^DB_PASSWORD=.*/DB_PASSWORD=${CI_DB_PASSWORD}/" \
+            neighbourlend/.env
+
       - name: Build and start isolated Docker stack
         run: docker compose up -d --build
 
@@ -44,7 +59,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker compose exec -T backend php artisan key:generate --force
           docker compose exec -T backend php artisan migrate --force
           docker compose exec -T backend php artisan storage:link
 
@@ -60,12 +74,48 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker compose exec -T db sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
-          curl --fail --silent --show-error --retry 75 --retry-delay 3 --retry-connrefused --output /dev/null http://127.0.0.1:8000/up
-          curl --fail --silent --show-error --retry 75 --retry-delay 3 --retry-connrefused --output /dev/null http://127.0.0.1:8000/api/categories
-          curl --fail --silent --show-error --retry 75 --retry-delay 3 --retry-connrefused --output /dev/null http://127.0.0.1:8000/api/tools
-          curl --fail --silent --show-error --retry 75 --retry-delay 3 --retry-connrefused --output /dev/null http://127.0.0.1:3000/
-          curl --fail --silent --show-error http://127.0.0.1:8000/api/tools | python3 -c 'import json,sys; assert len(json.load(sys.stdin).get("data", [])) > 0, "CI catalog is empty"'
+
+          docker compose exec -T db sh -c \
+            'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+
+          check_url() {
+            local url="$1"
+            local status
+
+            for attempt in {1..15}; do
+              status="$(curl --silent --show-error \
+                --max-time 8 \
+                --output /tmp/ci-response \
+                --write-out '%{http_code}' \
+                "$url" || true)"
+
+              if [[ "$status" == "200" ]]; then
+                echo "PASS: $url"
+                return 0
+              fi
+
+              if [[ "$status" == "000" ]]; then
+                echo "Waiting for $url (attempt $attempt)"
+                sleep 2
+                continue
+              fi
+
+              echo "::error::HTTP $status from $url"
+              return 1
+            done
+
+            echo "::error::Timeout waiting for $url"
+            return 1
+          }
+
+          check_url http://127.0.0.1:8000/up
+          check_url http://127.0.0.1:8000/api/categories
+          check_url http://127.0.0.1:8000/api/tools
+          check_url http://127.0.0.1:3000/
+
+          curl --fail --silent --show-error \
+            http://127.0.0.1:8000/api/tools |
+            python3 -c 'import json,sys; assert len(json.load(sys.stdin).get("data", [])) > 0, "CI catalog is empty"'
 
       - name: Create isolated test database
         shell: bash
@@ -85,9 +135,15 @@ jobs:
 
       - name: Show container status and logs on failure
         if: failure()
+        shell: bash
         run: |
           docker compose ps || true
-          docker compose logs --no-color --tail=200 db backend frontend || true
+
+          docker compose logs --no-color --tail=120 \
+            db backend frontend || true
+
+          docker compose exec -T backend sh -lc \
+            'tail -n 100 storage/logs/laravel.log' || true
 
       - name: Remove isolated CI containers and volumes
         if: always()
