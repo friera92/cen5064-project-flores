@@ -95,9 +95,9 @@ class LoanLifecycleService
         });
     }
 
-    public function inspectTool(int $reservationId, string $returnedCondition, int $userId)
+    public function inspectTool(int $reservationId, string $returnedCondition, int $userId, ?string $inspectionNotes = null)
     {
-        return DB::transaction(function () use ($reservationId, $returnedCondition, $userId) {
+        return DB::transaction(function () use ($reservationId, $returnedCondition, $userId, $inspectionNotes) {
             $reservation = $this->reservationRepository->findById($reservationId);
             if (!$reservation) {
                 throw (new ModelNotFoundException()->setModel(Reservation::class, [$reservationId]));
@@ -122,6 +122,7 @@ class LoanLifecycleService
             }
 
             $reservation->returned_condition = $returnedCondition;
+            $reservation->inspection_notes = trim($inspectionNotes ?? '') ?: null;
 
             switch ($returnedCondition) {
                 case 'GOOD':

@@ -19,6 +19,7 @@ export interface LenderReservation {
   total_cost: number | string
   status: ReservationStatus
   returned_condition: ReturnedCondition | null
+  inspection_notes: string | null
   cancellation_reason?: string | null
   canceled_by_user_id?: number | null
   canceled_at?: string | null

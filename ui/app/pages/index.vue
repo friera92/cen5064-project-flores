@@ -1,4 +1,9 @@
 <script setup lang="ts">
+
+definePageMeta({
+  middleware: 'redirect-admin'
+})
+
 import type { Category, PaginatedTools, ToolFilters } from '~/types/tool'
 
 const { listTools, listCategories } = useTools()

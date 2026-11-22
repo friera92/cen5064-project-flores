@@ -9,12 +9,12 @@ class ToolPolicy
 {
     public function update(User $user, Tool $tool): bool
     {
-        return $user->id === $tool->owner_id;
+        return !$user->isAdmin() && $user->id === $tool->owner_id;
     }
 
     public function delete(User $user, Tool $tool): bool
     {
-        return $user->id === $tool->owner_id || $user->isAdmin();
+        return $user->id === $tool->owner_id && !$user->isAdmin();
     }
 
     public function reserve(User $user, Tool $tool): bool

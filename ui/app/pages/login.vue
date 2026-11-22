@@ -15,15 +15,28 @@ async function handleLogin() {
 	loading.value = true
 
 	try {
-		await login({
+		const response = await login({
 			email: email.value,
 			password: password.value
 		})
 
+		// Administrators always go to their dashboard.
+		if (response.user.is_admin === true) {
+			await navigateTo('/admin')
+			return
+		}
+
+		// Regular users retain their requested destination.
+		const requestedRedirect = route.query.redirect
+
 		const redirect =
-			typeof route.query.redirect === 'string'
-				? route.query.redirect
-				: '/'
+			typeof requestedRedirect === 'string' &&
+			requestedRedirect.startsWith('/') &&
+			!requestedRedirect.startsWith('//') &&
+			!requestedRedirect.startsWith('/\\') &&
+			!requestedRedirect.startsWith('/admin')
+			? requestedRedirect
+			: '/'
 
 		await navigateTo(redirect)
 	} catch (error: any) {

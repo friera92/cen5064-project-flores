@@ -92,16 +92,23 @@ class ToolDeleteAuthorizationTest extends TestCase
         $this->assertNull($tool->fresh()->deleted_at);
     }
 
-    public function test_admin_can_soft_delete_another_users_tool(): void
+    public function test_admin_cannot_delete_another_users_tool(): void
     {
         $owner = User::factory()->create();
         $admin = User::factory()->create(['is_admin' => true]);
         $tool = $this->makeTool($owner);
 
         Sanctum::actingAs($admin);
-        $this->deleteJson("/api/tools/{$tool->id}")->assertNoContent();
 
-        $this->assertSoftDeleted('tools', ['id' => $tool->id]);
+        $this->deleteJson("/api/tools/{$tool->id}")
+            ->assertForbidden();
+
+        // The tool must remain in the database.
+        $this->assertDatabaseHas('tools', [
+            'id' => $tool->id,
+            'owner_id' => $owner->id,
+            'deleted_at' => null,
+        ]);
     }
 
     public function test_admin_cannot_delete_tool_with_active_reservation(): void
@@ -121,22 +128,23 @@ class ToolDeleteAuthorizationTest extends TestCase
         ]);
 
         Sanctum::actingAs($admin);
-        $this->deleteJson("/api/tools/{$tool->id}")
-            ->assertStatus(409)
-            ->assertJsonPath(
-                'message',
-                'Cannot delete a tool with pending, active, returned or disputed reservations.'
-            );
 
+        $this->deleteJson("/api/tools/{$tool->id}")
+            ->assertForbidden();
+
+        // The tool must not be deleted.
         $this->assertNull($tool->fresh()->deleted_at);
+
+        // The existing reservation must remain unchanged.
         $this->assertDatabaseHas('reservations', [
             'id' => $reservation->id,
             'tool_id' => $tool->id,
             'status' => ReservationState::ACTIVE->value,
+            'deleted_at' => null,
         ]);
     }
 
-    public function test_admin_deletion_permission_does_not_grant_update_permission(): void
+    public function test_admin_cannot_update_another_users_tool(): void
     {
         $owner = User::factory()->create();
         $admin = User::factory()->create(['is_admin' => true]);

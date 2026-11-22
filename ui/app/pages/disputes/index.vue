@@ -15,6 +15,7 @@ type DisputeEntry = {
   pictureUrl: string | null
   borrowerName: string | null
   returnedCondition: string | null
+  inspectionNotes: string | null
   startDate: string
   endDate: string
   detailUrl: string
@@ -85,6 +86,7 @@ async function loadDisputes(): Promise<void> {
         pictureUrl: item.tool?.picture_url ?? null,
         borrowerName: null,
         returnedCondition: item.returned_condition,
+        inspectionNotes: item.inspection_notes,
         startDate: item.start_date,
         endDate: item.end_date,
         detailUrl: `/reservations/${item.id}`,
@@ -99,6 +101,7 @@ async function loadDisputes(): Promise<void> {
         pictureUrl: item.tool?.picture_url ?? null,
         borrowerName: item.borrower?.name ?? null,
         returnedCondition: item.returned_condition,
+        inspectionNotes: item.inspection_notes,
         startDate: item.start_date,
         endDate: item.end_date,
         detailUrl: `/lender/reservations/${item.id}`,
@@ -164,6 +167,7 @@ onMounted(loadDisputes)
               <div><dt class="font-semibold text-[#172B25]">Rental dates</dt><dd>{{ displayDate(item.startDate) }} – {{ displayDate(item.endDate) }}</dd></div>
               <div v-if="item.role === 'LENDER'"><dt class="font-semibold text-[#172B25]">Borrower</dt><dd>{{ item.borrowerName || 'Unavailable' }}</dd></div>
             </dl>
+            <p class="mt-4 whitespace-pre-wrap text-sm text-[#66736D]"><strong class="text-[#172B25]">Inspection notes:</strong> {{ item.inspectionNotes || 'No notes were provided.' }}</p>
             <p class="mt-4 text-sm text-[#66736D]">Pending follow-up. Online dispute resolution is not available yet.</p>
             <NuxtLink :to="item.detailUrl" class="mt-4 inline-flex rounded-xl border border-[#176B52] px-4 py-2 text-sm font-semibold text-[#176B52] hover:bg-[#E9F4ED]">View reservation</NuxtLink>
           </div>

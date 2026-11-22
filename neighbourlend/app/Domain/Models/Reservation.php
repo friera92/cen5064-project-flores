@@ -20,6 +20,7 @@ class Reservation extends Model
         'status',
         'total_cost',
         'returned_condition',
+        'inspection_notes',
         'cancellation_reason',
         'canceled_by_user_id',
         'canceled_at'

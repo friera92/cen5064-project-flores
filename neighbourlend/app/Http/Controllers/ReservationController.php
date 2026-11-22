@@ -20,6 +20,11 @@ class ReservationController extends Controller
 
     public function store(ReservationRequest $request): JsonResponse
     {
+        abort_if(
+            $request->user()->isAdmin(),
+            403,
+            'Administrators cannot create reservations.'
+        );
         $data = $request->validated();
 
         $data['borrower_id'] = $request->user()->id;
