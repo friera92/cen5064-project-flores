@@ -34,6 +34,18 @@ jobs:
           APP_KEY="base64:$(openssl rand -base64 32)"
           sed -i "s|^APP_KEY=.*|APP_KEY=$APP_KEY|" neighbourlend/.env
 
+          # Ensure Laravel's HTTP server and Artisan commands
+          # use the same isolated PostgreSQL database.
+
+          sed -i \
+            -e 's/^DB_CONNECTION=.*/DB_CONNECTION=pgsql/' \
+            -e 's/^DB_HOST=.*/DB_HOST=db/' \
+            -e 's/^DB_PORT=.*/DB_PORT=5432/' \
+            -e 's/^DB_DATABASE=.*/DB_DATABASE=neighbourlend_ci/' \
+            -e 's/^DB_USERNAME=.*/DB_USERNAME=neighbourlend_ci/' \
+            -e "s/^DB_PASSWORD=.*/DB_PASSWORD=${CI_DB_PASSWORD}/" \
+            neighbourlend/.env
+
       - name: Build and start isolated Docker stack
         run: docker compose up -d --build
 
